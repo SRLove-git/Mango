@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getPage } from '../api/wordpress'
 import type { WPPost } from '../api/wordpress'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 export default function Page() {
   const { slug } = useParams<{ slug: string }>()
@@ -12,7 +13,12 @@ export default function Page() {
     if (!slug) return
     setLoading(true)
     getPage(slug)
-      .then(setPage)
+      .then((p) => {
+        setPage(p)
+        if (p?.title?.rendered) {
+          document.title = `${p.title.rendered} - Mango`
+        }
+      })
       .catch(() => setPage(null))
       .finally(() => setLoading(false))
   }, [slug])
@@ -39,10 +45,7 @@ export default function Page() {
           {page.title.rendered}
         </h1>
 
-        <div
-          className="detail-content"
-          dangerouslySetInnerHTML={{ __html: page.content.rendered }}
-        />
+        <MarkdownRenderer content={page.content.rendered} />
       </div>
     </article>
   )

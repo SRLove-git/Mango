@@ -8,6 +8,7 @@ export default function Topics() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    document.title = '专栏 - Mango'
     getTopics()
       .then(setTopics)
       .catch(() => setTopics([]))

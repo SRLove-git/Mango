@@ -1,34 +1,46 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getPost, getTopic } from '../api/wordpress'
+import { getPost, getPostById, getTopic } from '../api/wordpress'
 import type { WPPost, Topic } from '../api/wordpress'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 export default function PostDetail() {
-  // 支持两种路由:
-  //   /post/:slug          — slug 是文章 slug
+  // 支持多种路由:
+  //   /post/:slug                  — slug 是文章 slug
   //   /topic/:slug/post/:postSlug  — slug 是专栏 ID, postSlug 是文章 slug
-  const params = useParams<{ slug: string; postSlug?: string }>()
+  //   /archives/:postId            — postId 是文章数字 ID
+  //   /archives/:postId.html       — postId 是文章数字 ID（含 .html 后缀）
+  const params = useParams<{ slug: string; postSlug?: string; postId?: string }>()
   const postSlug = params.postSlug || params.slug
+  const postId = params.postId ? parseInt(params.postId, 10) : undefined
   const [post, setPost] = useState<WPPost | null>(null)
   const [topic, setTopic] = useState<Topic | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!postSlug) return
+    if (!postSlug && !postId) return
     setLoading(true)
     setTopic(null)
 
-    getPost(postSlug)
+    const fetchPromise = postId
+      ? getPostById(postId)
+      : postSlug
+        ? getPost(postSlug)
+        : Promise.resolve(null)
+
+    fetchPromise
       .then((p) => {
         setPost(p)
-        // If post has a topic, fetch the topic data
+        if (p?.title?.rendered) {
+          document.title = `${p.title.rendered} - Mango`
+        }
         if (p?.meta?.topic) {
           getTopic(p.meta.topic).then((t) => setTopic(t)).catch(() => {})
         }
       })
       .catch(() => setPost(null))
       .finally(() => setLoading(false))
-  }, [postSlug])
+  }, [postSlug, postId])
 
   if (loading) {
     return <div className="loading">加载中...</div>
@@ -109,10 +121,7 @@ export default function PostDetail() {
           )}
         </div>
 
-        <div
-          className="detail-content"
-          dangerouslySetInnerHTML={{ __html: post.content.rendered }}
-        />
+        <MarkdownRenderer content={post.content.rendered} />
       </div>
 
       {/* Topic related posts section */}

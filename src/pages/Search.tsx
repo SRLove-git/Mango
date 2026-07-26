@@ -14,6 +14,7 @@ export default function Search() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    document.title = `搜索: ${query || '...'} - Mango`
     if (!query) {
       setPosts([])
       setTotalPages(0)

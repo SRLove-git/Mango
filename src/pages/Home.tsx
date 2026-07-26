@@ -14,6 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    document.title = currentPage > 1 ? `第 ${currentPage} 页 - Mango` : 'Mango'
     setLoading(true)
     getPosts(currentPage)
       .then((res) => {
@@ -48,7 +49,7 @@ export default function Home() {
     <>
       {/* Hero Section */}
       {heroPost && (
-        <Link to={`/post/${heroPost.slug}`} className="hero">
+        <Link to={`/archives/${heroPost.id}.html`} className="hero">
           <div
             className="hero-bg"
             style={{

@@ -35,6 +35,7 @@ export default function Archive() {
   const [collapsedYears, setCollapsedYears] = useState<Set<number>>(new Set())
 
   useEffect(() => {
+    document.title = '归档 - Mango'
     setLoading(true)
     getAllPosts()
       .then((posts) => {
@@ -117,7 +118,7 @@ export default function Archive() {
                     return (
                       <Link
                         key={post.id}
-                        to={`/post/${post.slug}`}
+                        to={`/archives/${post.id}.html`}
                         className="archive-post-row"
                       >
                         {/* Date */}

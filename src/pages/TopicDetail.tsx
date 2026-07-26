@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getTopic } from '../api/wordpress'
 import type { Topic } from '../api/wordpress'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 export default function TopicDetail() {
   const { slug, postSlug } = useParams<{ slug: string; postSlug?: string }>()
@@ -12,7 +13,12 @@ export default function TopicDetail() {
     if (!slug) return
     setLoading(true)
     getTopic(slug)
-      .then(setTopic)
+      .then((t) => {
+        setTopic(t)
+        if (t?.title) {
+          document.title = `专栏: ${t.title} - Mango`
+        }
+      })
       .catch(() => setTopic(null))
       .finally(() => setLoading(false))
   }, [slug])
@@ -57,7 +63,7 @@ export default function TopicDetail() {
         <div>
           <h1 className="topic-header-title">{topic.title}</h1>
           {topic.description && (
-            <p className="topic-header-desc">{topic.description}</p>
+            <MarkdownRenderer content={topic.description} className="topic-header-desc" />
           )}
           <span className="topic-header-count">{topic.post_count} 篇文章</span>
         </div>
@@ -71,9 +77,7 @@ export default function TopicDetail() {
         ) : (
           topic.posts.map((post, index) => {
             const isCurrent = post.slug === currentPostSlug
-            const postPath = postSlug !== undefined
-              ? `/topic/${topic.id}/post/${post.slug}`
-              : `/post/${post.slug}`
+            const postPath = `/topic/${topic.id}/post/${post.slug}`
 
             return (
               <Link

@@ -15,6 +15,7 @@ export default function Category() {
 
   useEffect(() => {
     if (!slug) return
+    document.title = `分类: ${slug} - Mango`
     setLoading(true)
     getPostsByCategory(slug, currentPage)
       .then((res) => {

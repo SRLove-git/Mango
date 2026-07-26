@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 interface LabelItem {
   name: string
@@ -63,6 +64,7 @@ export default function Links() {
 
   const fetchLinks = () => {
     setLoading(true)
+    document.title = '友情链接 - Mango'
     fetch(LINKS_API)
       .then((res) => {
         if (!res.ok) throw new Error('获取友链数据失败')
@@ -176,7 +178,7 @@ export default function Links() {
               {/* Previews */}
               <div className="previews">
                 <div className="desc">
-                  {item.description || ''}
+                  <MarkdownRenderer content={item.description || ''} />
                 </div>
 
                 <div className={'posts' + (item.posts && item.posts.length === 1 ? ' posts--single' : '')}>
