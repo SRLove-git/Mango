@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { getPosts } from '../api/wordpress'
 import type { WPPost } from '../api/wordpress'
+import { getRandomImageUrl, useRandomImageFallback } from '../api/image'
 import PostCard from '../components/PostCard'
 import Pagination from '../components/Pagination'
 
@@ -29,9 +30,19 @@ export default function Home() {
 
   // First post as hero
   const heroPost = posts[0]
+  const useFallback = useRandomImageFallback()
   const heroImage = heroPost?._embedded?.['wp:featuredmedia']?.[0]?.source_url
   const heroCategories = heroPost?._embedded?.['wp:term']?.[0] ?? []
   const remainingPosts = posts.slice(1)
+
+  let heroBgImage
+  if (heroImage) {
+    heroBgImage = `url(${heroImage})`
+  } else if (useFallback) {
+    heroBgImage = `url(${getRandomImageUrl(heroPost?.id)})`
+  } else {
+    heroBgImage = 'linear-gradient(135deg, var(--purple), var(--blue))'
+  }
 
   return (
     <>
@@ -41,9 +52,7 @@ export default function Home() {
           <div
             className="hero-bg"
             style={{
-              backgroundImage: heroImage
-                ? `url(${heroImage})`
-                : 'linear-gradient(135deg, var(--purple), var(--blue))'
+              backgroundImage: heroBgImage
             }}
           />
           <div className="hero-overlay" />

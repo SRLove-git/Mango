@@ -1,5 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { WPPost } from '../api/wordpress'
+import { getRandomImageUrl, useRandomImageFallback } from '../api/image'
+
+const MAX_RETRIES = 5
 
 interface PostCardProps {
   post: WPPost
@@ -7,16 +11,35 @@ interface PostCardProps {
 
 export default function PostCard({ post }: PostCardProps) {
   const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url
+  const useFallback = useRandomImageFallback()
+  const [retryCount, setRetryCount] = useState(0)
+  const [hidden, setHidden] = useState(false)
   const categories = post._embedded?.['wp:term']?.[0] ?? []
+
+  // 有特色图片 → 用特色图片；无特色图片且启用兜底 → 用随机图；否则无图
+  const imageUrl = featuredImage || (useFallback ? getRandomImageUrl(`${post.id}-${retryCount}`) : null)
+
+  // 无图或超过重试次数后隐藏，则不渲染缩略图
+  const showThumb = imageUrl && !hidden
 
   return (
     <article className="post-card glass">
-      {featuredImage && (
+      {showThumb && (
         <Link to={`/post/${post.slug}`} className="post-thumb-wrap group">
-          {/* Overlay — 借鉴 Firefly 的 hover/active 遮罩 */}
           <div className="post-thumb-overlay" />
-          <img src={featuredImage} alt={post.title.rendered} loading="lazy" className="post-thumb-img" />
-          {/* 箭头 — 借鉴 Firefly 的 hover 出现效果 */}
+          <img
+            src={imageUrl!}
+            alt={post.title.rendered}
+            loading="lazy"
+            className="post-thumb-img"
+            onError={() => {
+              if (retryCount < MAX_RETRIES - 1) {
+                setRetryCount((c) => c + 1)
+              } else {
+                setHidden(true)
+              }
+            }}
+          />
           <span className="post-thumb-arrow">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />

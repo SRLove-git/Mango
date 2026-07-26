@@ -48,12 +48,17 @@ function mango_enqueue_scripts(): void {
         }
     }
 
+    // 读取基本设置
+    $mango_basic      = get_option('mango_basic_settings', []);
+
     // 将 WordPress 数据传递给前端
     wp_localize_script('mango-app', 'MANGO_DATA', [
-        'siteUrl'  => site_url(),
-        'apiUrl'   => esc_url_raw(rest_url('wp/v2')),
-        'themeUri' => get_template_directory_uri(),
-        'nonce'    => wp_create_nonce('wp_rest'),
+        'siteUrl'        => site_url(),
+        'apiUrl'         => esc_url_raw(rest_url('wp/v2')),
+        'themeUri'       => get_template_directory_uri(),
+        'nonce'          => wp_create_nonce('wp_rest'),
+        'randomImageApi' => esc_url_raw($mango_basic['random_image_api'] ?? ''),
+        'useRandomImage' => ($mango_basic['use_random_image'] ?? '1') === '1',
     ]);
 }
 add_action('wp_enqueue_scripts', 'mango_enqueue_scripts');
@@ -160,6 +165,13 @@ function mango_theme_body_class(array $classes): array {
     } else {
         $classes[] = $style . '-theme';
     }
+
+    // 随机图片兜底开关
+    $basic = get_option('mango_basic_settings', []);
+    if (($basic['use_random_image'] ?? '1') !== '1') {
+        $classes[] = 'no-random-image-fallback';
+    }
+
     return $classes;
 }
 add_filter('body_class', 'mango_theme_body_class');
@@ -220,13 +232,17 @@ function mango_render_admin_page(): void {
     if (isset($_POST['mango_save'])) {
         check_admin_referer('mango_settings_action', 'mango_settings_nonce');
 
-        // 基本设置
-        $basic = [
-            'site_logo'   => esc_url_raw($_POST['mango_site_logo'] ?? ''),
-            'avatar_url'  => esc_url_raw($_POST['mango_avatar_url'] ?? ''),
-            'footer_text' => sanitize_text_field($_POST['mango_footer_text'] ?? ''),
-        ];
-        update_option('mango_basic_settings', $basic);
+        // 基本设置（仅在基本设置字段存在时保存，避免被主题设置保存覆盖）
+        if (isset($_POST['mango_site_logo'])) {
+            $basic = [
+                'site_logo'        => esc_url_raw($_POST['mango_site_logo'] ?? ''),
+                'avatar_url'       => esc_url_raw($_POST['mango_avatar_url'] ?? ''),
+                'footer_text'      => sanitize_text_field($_POST['mango_footer_text'] ?? ''),
+                'random_image_api' => esc_url_raw($_POST['mango_random_image_api'] ?? ''),
+                'use_random_image' => isset($_POST['mango_use_random_image']) ? '1' : '0',
+            ];
+            update_option('mango_basic_settings', $basic);
+        }
 
         // 处理自定义配色方案
         $schemes = get_option('mango_color_schemes', []);
@@ -293,10 +309,12 @@ function mango_render_admin_page(): void {
     // 读取当前值
     $style       = get_theme_mod('mango_theme_style', 'anime');
     $card_radius = get_theme_mod('mango_card_radius', 25);
-    $basic       = get_option('mango_basic_settings', []);
-    $site_logo   = $basic['site_logo'] ?? '';
-    $avatar_url  = $basic['avatar_url'] ?? '';
-    $footer_text = $basic['footer_text'] ?? '';
+    $basic            = get_option('mango_basic_settings', []);
+    $site_logo        = $basic['site_logo'] ?? '';
+    $avatar_url       = $basic['avatar_url'] ?? '';
+    $footer_text      = $basic['footer_text'] ?? '';
+    $random_image_api = $basic['random_image_api'] ?? '';
+    $use_random_image = $basic['use_random_image'] ?? '1';
 
     // 读取自定义配色方案
     $schemes = get_option('mango_color_schemes', []);
@@ -351,6 +369,24 @@ function mango_render_admin_page(): void {
                             </td>
                         </tr>
                         <tr>
+                            <th scope="row"><label for="mango_random_image_api"><?php _e('随机图片 API', 'mango'); ?></label></th>
+                            <td>
+                                <input type="url" id="mango_random_image_api" name="mango_random_image_api"
+                                       value="<?php echo esc_attr($random_image_api); ?>" class="regular-text"
+                                       placeholder="https://uapis.cn/api/v1/random/image">
+                                <p class="description"><?php _e('文章无特色图片时使用的随机图片 API 地址。留空使用默认值。', 'mango'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php _e('随机图片兜底', 'mango'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" id="mango_use_random_image" name="mango_use_random_image" value="1" <?php checked($use_random_image, '1'); ?>>
+                                    <?php _e('文章无特色图片时使用随机图片作为缩略图', 'mango'); ?>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
                             <th scope="row"><label for="mango_footer_text"><?php _e('页脚文字', 'mango'); ?></label></th>
                             <td>
                                 <input type="text" id="mango_footer_text" name="mango_footer_text"
@@ -359,6 +395,12 @@ function mango_render_admin_page(): void {
                             </td>
                         </tr>
                     </table>
+
+                    <p class="submit">
+                        <button type="submit" name="mango_save" class="button button-primary">
+                            <?php _e('保存设置', 'mango'); ?>
+                        </button>
+                    </p>
 
                     <?php else: /* === 主题设置选项卡 === */ ?>
 
