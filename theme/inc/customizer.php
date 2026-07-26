@@ -26,8 +26,8 @@ function mango_customize_register( WP_Customize_Manager $wp_customize ): void {
 		'label'   => __( '主题配色风格', 'mango' ),
 		'type'    => 'radio',
 		'choices' => [
-			'anime' => __( 'Anime 紫蓝霓虹', 'mango' ),
-			'black' => __( '黑色简约', 'mango' ),
+			'anime' => __( 'Firefly 青绿暗色', 'mango' ),
+			'black' => __( '纯黑简约', 'mango' ),
 		],
 	] );
 }
@@ -53,12 +53,15 @@ function mango_sanitize_theme_style( string $value ): string {
  */
 function mango_theme_body_class( array $classes ): array {
 	$style = get_theme_mod( 'mango_theme_style', 'anime' );
-	// 自定义方案使用 anime-theme 作为基础布局
+	// 自定义方案使用 dark-theme 作为基础布局
 	if ( str_starts_with( $style, 'custom_' ) ) {
-		$classes[] = 'anime-theme';
+		$classes[] = 'dark-theme';
 		$classes[] = 'custom-theme';
 	} else {
-		$classes[] = $style . '-theme';
+		$classes[] = 'dark-theme';
+		if ( $style === 'black' ) {
+			$classes[] = 'black-theme';
+		}
 	}
 
 	// 随机图片兜底开关
@@ -94,10 +97,8 @@ function mango_output_custom_css(): void {
 		'glass_hover'  => '--glass-hover',
 		'border'       => '--border',
 		'border_hover' => '--border-hover',
-		'purple'       => '--purple',
-		'purple_glow'  => '--purple-glow',
-		'blue'         => '--blue',
-		'blue_glow'    => '--blue-glow',
+		'accent'       => '--accent',
+		'accent_glow'  => '--accent-glow',
 		'text'         => '--text',
 		'text_muted'   => '--text-muted',
 		'text_dim'     => '--text-dim',
@@ -115,7 +116,7 @@ function mango_output_custom_css(): void {
 	}
 
 	echo '<style id="mango-custom-colors">' . "\n";
-	echo "body.anime-theme {\n";
+	echo "body.dark-theme {\n";
 	echo '  ' . implode( "\n  ", $rules ) . "\n";
 	echo "}\n";
 	echo '</style>' . "\n";
@@ -132,7 +133,7 @@ function mango_output_radius_css(): void {
 		$radius = 25;
 	}
 	echo '<style id="mango-radius">' . "\n";
-	echo "body.anime-theme, body.black-theme, body.custom-theme {\n";
+	echo "body.dark-theme, body.custom-theme {\n";
 	echo "  --radius-sm: {$radius}px;\n";
 	echo "  --radius-md: {$radius}px;\n";
 	echo "  --radius-lg: {$radius}px;\n";

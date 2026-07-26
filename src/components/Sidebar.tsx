@@ -1,172 +1,299 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import type { WPCategory } from '../api/wordpress'
-import type { Topic } from '../api/wordpress'
+import { useState, useEffect } from 'react'
+import { useSiteData } from '../context/SiteDataContext'
+import { useArticleToc } from '../context/ArticleTocContext'
+import { getWikiProject } from '../api/wordpress'
 
 interface Props {
   side: 'left' | 'right'
-  user: { name: string; description: string; avatar_urls: Record<string, string> } | null
-  categories: WPCategory[]
-  tags: Array<{ id: number; name: string; slug: string }>
-  topics?: Topic[]
   className?: string
 }
 
-export default function Sidebar({ side, user, categories, tags, topics, className }: Props) {
+interface SidebarWidget {
+  id: string
+  side: 'left' | 'right'
+  type: string
+  title: string
+  content: string
+  order: number
+  display_on: string[]
+}
+
+interface WikiTreeItem {
+  id: string
+  title: string
+  icon?: string
+  children?: WikiTreeItem[]
+}
+
+const DEFAULT_TITLES: Record<string, string> = {
+  profile: '个人资料',
+  categories: '分类',
+  tags: '标签云',
+  topics: '专栏',
+  wiki_tree: 'Wiki 页面',
+  toc: '文章目录',
+  about: '关于',
+  site_info: '站点信息',
+  custom_html: '自定义',
+}
+
+// 需要内容的 widget 类型（about / custom_html）
+const CONTENT_TYPES = ['about', 'custom_html']
+
+export default function Sidebar({ side, className }: Props) {
   const navigate = useNavigate()
+  const { user, categories, tags, topics } = useSiteData()
   const location = useLocation()
+  const { scanVersion } = useArticleToc()
 
-  // 从 URL 推断当前专栏上下文
-  let currentTopic: Topic | undefined
-  let currentPostSlug: string | undefined
+  // 从渲染后的 DOM 中扫描文章标题（适用于任何 URL 格式）
+  const [domHeadings, setDomHeadings] = useState<Array<{ id: string; text: string; level: number }>>([])
+  useEffect(() => {
+    // 稍等一个微任务让 DOM 更新完成
+    const id = requestAnimationFrame(() => {
+      const els = document.querySelectorAll(
+        '.detail-content h1, .detail-content h2, .detail-content h3, .detail-content h4, .detail-content h5, .detail-content h6, .wiki-article-content h1, .wiki-article-content h2, .wiki-article-content h3, .wiki-article-content h4, .wiki-article-content h5, .wiki-article-content h6'
+      )
+      const result: Array<{ id: string; text: string; level: number }> = []
+      els.forEach((el) => {
+        const level = parseInt(el.tagName.slice(1), 10)
+        const text = el.textContent?.trim() || ''
+        if (text) {
+          if (!el.id) {
+            el.id = text.toLowerCase().replace(/[^\w\u4e00-\u9fff]+/g, '-').replace(/(^-|-$)/g, '') || 'heading'
+          }
+          result.push({ id: el.id, text, level })
+        }
+      })
+      setDomHeadings(result)
+    })
+    return () => cancelAnimationFrame(id)
+  }, [location.pathname, scanVersion])
 
-  if (topics && topics.length > 0) {
-    const pathParts = location.pathname.split('/').filter(Boolean)
+  // 从 URL 中提取当前 wiki 项目名
+  const wikiProjectSlug = location.pathname.startsWith('/wiki/')
+    ? location.pathname.split('/')[2]
+    : null
 
-    if (pathParts[0] === 'topic') {
-      // /topic/{slug} 或 /topic/{slug}/post/{postSlug}
-      currentTopic = topics.find((t) => t.id === pathParts[1])
-      currentPostSlug = pathParts[3]
-    } else if (pathParts[0] === 'post') {
-      // /post/{slug} — 查找该文章所属专栏
-      const slug = pathParts[1]
-      if (slug) {
-        currentTopic = topics.find((t) => t.posts.some((p) => p.slug === slug))
-        currentPostSlug = slug
-      }
+  // 获取 wiki 树状数据（用于 wiki_tree 小工具）
+  const [wikiTree, setWikiTree] = useState<WikiTreeItem[]>([])
+  const [wikiProjectTitle, setWikiProjectTitle] = useState('')
+  useEffect(() => {
+    if (!wikiProjectSlug) {
+      setWikiTree([])
+      setWikiProjectTitle('')
+      return
     }
+    getWikiProject(wikiProjectSlug).then((d) => {
+      if (d && d.tree) {
+        setWikiTree(d.tree)
+        setWikiProjectTitle(d.title)
+      }
+    }).catch(() => {
+      setWikiTree([])
+      setWikiProjectTitle('')
+    })
+  }, [wikiProjectSlug])
+
+  // 判断当前页面类型
+  function getCurrentPage(): string {
+    const path = location.pathname
+    if (path === '/') return 'home'
+    if (path === '/archives') return 'archive'
+    if (path === '/search') return 'search'
+    if (path === '/links') return 'links'
+    if (path === '/topics') return 'topics'
+    if (path === '/wiki') return 'wiki_list'
+    if (path.startsWith('/wiki/')) return 'wiki'
+    if (path.startsWith('/topic/')) return 'topic'
+    if (path.startsWith('/post/') || path.startsWith('/archives/')) return 'post'
+    if (path.startsWith('/category/')) return 'category'
+    if (path.startsWith('/page/')) return 'page'
+    return 'home'
   }
 
-  if (side === 'left') {
-    return (
-      <aside className={`sidebar sidebar-left ${className || ''}`}>
-        {/* Top section: 个人资料 */}
-        <div className="sidebar-top">
-          <div className="glass profile-card">
-            <div className="avatar-wrap">
-              {user?.avatar_urls?.['96'] ? (
-                <img className="avatar" src={user.avatar_urls['96']} alt={user.name} />
-              ) : (
-                <div className="avatar" style={{ background: 'linear-gradient(135deg, var(--purple), var(--blue))' }} />
-              )}
-            </div>
-            <h2>{user?.name || 'Mango'}</h2>
-            <p>{user?.description || '分享技术、生活与思考'}</p>
+  const currentPage = getCurrentPage()
+
+  const rawWidgets: SidebarWidget[] = (window as any).MANGO_DATA?.sidebar?.widgets || []
+  const widgets = rawWidgets
+    .filter((w) => w.side === side)
+    .filter((w) => !w.display_on || w.display_on.length === 0 || w.display_on.includes(currentPage))
+    .sort((a, b) => a.order - b.order)
+
+  function renderWidget(w: SidebarWidget, i: number) {
+    const title = w.title || DEFAULT_TITLES[w.type] || w.type
+    const key = w.id || i
+
+    // --- profile ---
+    if (w.type === 'profile') {
+      return (
+        <div className="glass profile-card" key={key}>
+          <div className="avatar-wrap">
+            {user?.avatar_urls?.['96'] ? (
+              <img className="avatar" src={user.avatar_urls['96']} alt={user.name} />
+            ) : (
+              <div className="avatar" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))' }} />
+            )}
           </div>
+          <h2>{user?.name || 'Mango'}</h2>
+          <p>{user?.description || '分享技术、生活与思考'}</p>
+        </div>
+      )
+    }
 
-          {/* 专栏文章目录（在 profile-card 下方） */}
-          {currentTopic && currentTopic.posts.length > 0 && (
-            <div className="glass">
-              <h3 className="sidebar-title">
-                <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
-                  </svg>
-                  {currentTopic.title}
-                </span>
-              </h3>
-              <ul className="topic-article-dir">
-                {currentTopic.posts.map((p, i) => {
-                  const path = `/topic/${currentTopic!.id}/post/${p.slug}`
-                  const isActive = p.slug === currentPostSlug
-                  return (
-                    <li
-                      key={p.id}
-                      className={isActive ? 'active' : ''}
-                      onClick={() => navigate(path)}
-                    >
-                      <span className="dir-index">{i + 1}</span>
-                      <span className="dir-title">{p.title}</span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
-
-          <div className="glass">
-            <h3 className="sidebar-title">分类</h3>
-            <ul className="category-list">
-              {categories.map((cat) => (
-                <li key={cat.id} onClick={() => navigate(`/category/${cat.slug}`)}>
-                  <span>{cat.name}</span>
-                  <span className="count">{cat.count}</span>
+    // --- topics (专栏) ---
+    if (w.type === 'topics') {
+      if (!topics || topics.length === 0) return null
+      return (
+        <div className="glass" key={key}>
+          <h3 className="sidebar-title">
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {title}
+              <span className="pill-count" style={{ background: 'var(--glass)' }}>{topics.length}</span>
+            </span>
+          </h3>
+          <ul className="category-list topic-sidebar-list">
+            {topics.map((t) => {
+              const firstPost = t.posts[0]
+              const path = firstPost ? `/topic/${t.id}/post/${firstPost.slug}` : `/topic/${t.id}`
+              return (
+                <li key={t.id} onClick={() => navigate(path)}>
+                  <span className="topic-sidebar-name">
+                    {t.icon && <img src={t.icon} alt="" className="topic-sidebar-icon" />}
+                    <span>{t.title}</span>
+                  </span>
+                  <span className="count">{t.post_count}</span>
                 </li>
-              ))}
-            </ul>
-          </div>
+              )
+            })}
+          </ul>
+        </div>
+      )
+    }
 
-          {/* 专栏目录 */}
-          {topics && topics.length > 0 && (
-            <div className="glass">
-              <h3 className="sidebar-title">
-                <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  专栏
-                  <span className="pill-count" style={{ background:'var(--glass)' }}>{topics.length}</span>
-                </span>
-              </h3>
-              <ul className="category-list topic-sidebar-list">
-                {topics.map((t) => {
-                  const firstPost = t.posts[0]
-                  const path = firstPost
-                    ? `/topic/${t.id}/post/${firstPost.slug}`
-                    : `/topic/${t.id}`
-                  return (
-                    <li key={t.id} onClick={() => navigate(path)}>
-                      <span className="topic-sidebar-name">
-                        {t.icon && (
-                          <img src={t.icon} alt="" className="topic-sidebar-icon" />
-                        )}
-                        <span>{t.title}</span>
-                      </span>
-                      <span className="count">{t.post_count}</span>
-                    </li>
-                  )
-                })}
+    // --- wiki_tree (Wiki 页面树) ---
+    if (w.type === 'wiki_tree') {
+      if (!wikiProjectSlug || wikiTree.length === 0) return null
+      const currentSlug = location.pathname.split('/')[3] || ''
+
+      function renderTreeNodes(items: WikiTreeItem[], depth = 0): React.ReactNode {
+        return items.map((item) => {
+          const isActive = item.id === currentSlug
+          const hasActiveChild = item.children?.some((c) => c.id === currentSlug) ||
+            item.children?.some((c) => c.children?.some((cc) => cc.id === currentSlug))
+          const itemPath = `/wiki/${wikiProjectSlug}/${item.id}`
+
+          return (
+            <li key={item.id}>
+              <span
+                className={`wiki-tree-widget-link ${isActive ? 'active' : ''} ${hasActiveChild && !isActive ? 'in-active-path' : ''}`}
+                style={{ paddingLeft: `${(depth * 16) + 4}px` }}
+                onClick={() => navigate(itemPath)}
+              >
+                <span className="wiki-tree-widget-dot" />
+                <span>{item.title}</span>
+              </span>
+              {item.children && item.children.length > 0 && (
+                <ul className="wiki-tree-widget-sublist">
+                  {renderTreeNodes(item.children, depth + 1)}
+                </ul>
+              )}
+            </li>
+          )
+        })
+      }
+
+      return (
+        <div className="glass wiki-tree-widget" key={key}>
+          <h3 className="sidebar-title">{title}</h3>
+          <ul className="wiki-tree-widget-tree">
+            <li>
+              <span
+                className="wiki-tree-widget-link wiki-tree-widget-project"
+                onClick={() => navigate(`/wiki/${wikiProjectSlug}`)}
+              >
+                {wikiProjectTitle}
+              </span>
+              <ul className="wiki-tree-widget-sublist">
+                {renderTreeNodes(wikiTree)}
               </ul>
-            </div>
-          )}
+            </li>
+          </ul>
         </div>
+      )
+    }
 
-        {/* Sticky section: 关于 */}
-        <div className="sidebar-sticky">
-          <div className="glass">
-            <h3 className="sidebar-title">关于</h3>
-            <p className="sidebar-about-text">
-              Mango 是一个基于 WordPress + React 的个人博客主题，追求极致的视觉体验与性能。
-            </p>
+    // --- toc (文章目录) ---
+    if (w.type === 'toc') {
+      if (domHeadings.length === 0) return null
+      const minLevel = Math.min(...domHeadings.map((h) => h.level))
+      return (
+        <div className="glass sidebar-toc" key={key}>
+          <h3 className="sidebar-title">{title}</h3>
+          <ul className="toc-list">
+            {domHeadings.map((h, idx) => (
+              <li
+                key={idx}
+                className="toc-item"
+                style={{ paddingLeft: `${(h.level - minLevel) * 14}px` }}
+                onClick={() => {
+                  const el = document.getElementById(h.id)
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+              >
+                <span className="toc-dot" />
+                <span className="toc-text">{h.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    // --- categories (分类) ---
+    if (w.type === 'categories') {
+      return (
+        <div className="glass" key={key}>
+          <h3 className="sidebar-title">{title}</h3>
+          <ul className="category-list">
+            {categories.map((cat) => (
+              <li key={cat.id} onClick={() => navigate(`/category/${cat.slug}`)}>
+                <span>{cat.name}</span>
+                <span className="count">{cat.count}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    // --- tags (标签云) ---
+    if (w.type === 'tags') {
+      if (tags.length === 0) return null
+      return (
+        <div className="glass" key={key}>
+          <h3 className="sidebar-title">{title}</h3>
+          <div className="tag-cloud">
+            {tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="tag"
+                onClick={() => navigate(`/search?q=${encodeURIComponent(tag.name)}`)}
+              >
+                {tag.name}
+              </span>
+            ))}
           </div>
         </div>
-      </aside>
-    )
-  }
+      )
+    }
 
-  // Right sidebar
-  return (
-    <aside className={`sidebar sidebar-right ${className || ''}`}>
-      {/* Top section: 标签云 */}
-      <div className="sidebar-top">
-        {tags.length > 0 && (
-          <div className="glass">
-            <h3 className="sidebar-title">标签云</h3>
-            <div className="tag-cloud">
-              {tags.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="tag"
-                  onClick={() => navigate(`/search?q=${encodeURIComponent(tag.name)}`)}
-                >
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Sticky section: 站点信息 */}
-      <div className="sidebar-sticky">
-        <div className="glass">
-          <h3 className="sidebar-title">站点信息</h3>
+    // --- site_info (站点信息) ---
+    if (w.type === 'site_info') {
+      return (
+        <div className="glass" key={key}>
+          <h3 className="sidebar-title">{title}</h3>
           <ul className="site-info-list">
             <li>
               <span className="info-label">分类</span>
@@ -178,6 +305,32 @@ export default function Sidebar({ side, user, categories, tags, topics, classNam
             </li>
           </ul>
         </div>
+      )
+    }
+
+    // --- about / custom_html (需要内容字段) ---
+    if (CONTENT_TYPES.includes(w.type)) {
+      if (!w.content) return null
+      const isHtml = w.type === 'custom_html'
+      return (
+        <div className="glass" key={key}>
+          <h3 className="sidebar-title">{title}</h3>
+          {isHtml ? (
+            <div dangerouslySetInnerHTML={{ __html: w.content }} />
+          ) : (
+            <p className="sidebar-about-text">{w.content}</p>
+          )}
+        </div>
+      )
+    }
+
+    return null
+  }
+
+  return (
+    <aside className={`sidebar sidebar-${side} ${className || ''}`}>
+      <div className="sidebar-top">
+        {widgets.map((w, i) => renderWidget(w, i))}
       </div>
     </aside>
   )

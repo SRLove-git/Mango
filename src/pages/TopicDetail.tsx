@@ -83,7 +83,7 @@ export default function TopicDetail() {
               <Link
                 key={post.id}
                 to={postPath}
-                className={`topic-post-item glass ${isCurrent ? 'topic-post-item--active' : ''}`}
+                className={`topic-post-item glass onload-animation ${isCurrent ? 'topic-post-item--active' : ''}`}
               >
                 <span className="topic-post-index">{index + 1}</span>
                 <div className="topic-post-info">

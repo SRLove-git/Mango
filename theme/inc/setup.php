@@ -60,6 +60,19 @@ function mango_enqueue_scripts(): void {
 	// 读取布局设置
 	$mango_layout = get_theme_mod( 'mango_layout_settings', [] );
 
+	// 读取侧边栏配置
+	$mango_sidebar_widgets = get_option( 'mango_sidebar_widgets', [] );
+	if ( empty( $mango_sidebar_widgets ) ) {
+		$mango_sidebar_widgets = [
+			[ 'id' => 'w_profile', 'side' => 'left', 'type' => 'profile', 'title' => '', 'content' => '', 'order' => 1, 'display_on' => [] ],
+			[ 'id' => 'w_categories', 'side' => 'left', 'type' => 'categories', 'title' => '', 'content' => '', 'order' => 2, 'display_on' => [] ],
+			[ 'id' => 'w_topics', 'side' => 'left', 'type' => 'topics', 'title' => '', 'content' => '', 'order' => 3, 'display_on' => [] ],
+			[ 'id' => 'w_about', 'side' => 'left', 'type' => 'about', 'title' => '', 'content' => 'Mango 是一个基于 WordPress + React 的个人博客主题，追求极致的视觉体验与性能。', 'order' => 4, 'display_on' => [] ],
+			[ 'id' => 'w_tags', 'side' => 'right', 'type' => 'tags', 'title' => '', 'content' => '', 'order' => 1, 'display_on' => [] ],
+			[ 'id' => 'w_site_info', 'side' => 'right', 'type' => 'site_info', 'title' => '', 'content' => '', 'order' => 2, 'display_on' => [] ],
+		];
+	}
+
 	// 将 WordPress 数据传递给前端
 	wp_localize_script( 'mango-app', 'MANGO_DATA', [
 		'siteUrl'        => site_url(),
@@ -88,6 +101,9 @@ function mango_enqueue_scripts(): void {
 			'sidebar_position' => $mango_layout['sidebar_position'] ?? 'right',
 			'content_width'    => intval( $mango_layout['content_width'] ?? 960 ),
 			'archive_layout'   => $mango_layout['archive_layout'] ?? 'grid',
+		],
+		'sidebar' => [
+			'widgets' => $mango_sidebar_widgets,
 		],
 	] );
 }
@@ -156,6 +172,9 @@ function mango_add_spa_rewrite_rules(): void {
 		'search/?$',
 		'links/?$',
 		'topics/?$',
+		'wiki/([^/]+)/([^/]+)/?$',
+		'wiki/([^/]+)/?$',
+		'wiki/?$',
 	];
 
 	foreach ( $routes as $route ) {
@@ -171,12 +190,21 @@ function mango_flush_on_activation(): void {
 }
 add_action( 'after_switch_theme', 'mango_flush_on_activation' );
 
+/** 检测到新的 SPA 路由时刷新重写规则 */
+function mango_flush_on_routes_update(): void {
+	if ( get_option( 'mango_spa_routes_updated' ) !== '1.1' ) {
+		flush_rewrite_rules();
+		update_option( 'mango_spa_routes_updated', '1.1' );
+	}
+}
+add_action( 'init', 'mango_flush_on_routes_update' );
+
 /**
  * 阻止 WordPress 对 SPA 前端路由做 canonical 重定向。
  * 例如访问 /post/slug 时 WordPress 不会将其重定向到 /archives/123.html。
  */
 function mango_disable_spa_redirect( $redirect_url, $requested_url ) {
-	$spa_prefixes = [ '/post/', '/topic/', '/archives', '/page/', '/category/', '/search', '/links', '/topics' ];
+	$spa_prefixes = [ '/post/', '/topic/', '/archives', '/page/', '/category/', '/search', '/links', '/topics', '/wiki/' ];
 
 	$url_path = wp_parse_url( $requested_url, PHP_URL_PATH );
 

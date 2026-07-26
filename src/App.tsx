@@ -9,6 +9,8 @@ import Search from './pages/Search'
 import Links from './pages/Links'
 import Topics from './pages/Topics'
 import TopicDetail from './pages/TopicDetail'
+import WikiIndex from './pages/WikiIndex'
+import WikiDetail from './pages/WikiDetail'
 
 export default function App() {
   return (
@@ -26,6 +28,9 @@ export default function App() {
         <Route path="/topics" element={<Topics />} />
         <Route path="/topic/:slug" element={<TopicDetail />} />
         <Route path="/topic/:slug/post/:postSlug" element={<PostDetail />} />
+        <Route path="/wiki" element={<WikiIndex />} />
+        <Route path="/wiki/:project/:slug" element={<WikiDetail />} />
+        <Route path="/wiki/:project" element={<WikiDetail />} />
       </Route>
     </Routes>
   )

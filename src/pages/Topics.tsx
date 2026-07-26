@@ -42,7 +42,7 @@ export default function Topics() {
             : `/topic/${topic.id}`
 
           return (
-            <Link key={topic.id} to={detailPath} className="topic-card glass">
+            <Link key={topic.id} to={detailPath} className="topic-card glass onload-animation">
               <div className="topic-card-icon">
                 {iconUrl ? (
                   <img src={iconUrl} alt={topic.title} />

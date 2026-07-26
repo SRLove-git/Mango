@@ -23,7 +23,7 @@ export default function PostCard({ post }: PostCardProps) {
   const showThumb = imageUrl && !hidden
 
   return (
-    <article className="post-card glass">
+    <article className="post-card glass onload-animation">
       {showThumb && (
         <Link to={`/archives/${post.id}.html`} className="post-thumb-wrap group">
           <div className="post-thumb-overlay" />

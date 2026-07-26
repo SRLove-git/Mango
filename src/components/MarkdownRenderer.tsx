@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement, type ReactNode } from 'react'
+import { useMemo, useState, createElement, type ReactElement, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -102,6 +102,24 @@ function CodeBlockMac({
   )
 }
 
+/** slugify 文本生成 HTML ID */
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fff]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .replace(/^-+|-+$/g, '') || 'heading'
+}
+
+/** 生成带 ID 的 heading 组件 */
+function createHeading(level: number) {
+  return function Heading({ children, ...props }: { children?: ReactNode; [key: string]: any }) {
+    const text = extractText(children)
+    const id = slugify(text)
+    return createElement(`h${level}`, { id, ...props }, children)
+  }
+}
+
 const components: Components = {
   a: ({ href, children, ...props }) => {
     const isExternal = href?.startsWith('http')
@@ -137,6 +155,12 @@ const components: Components = {
 
     return <CodeBlockMac lang={lang} code={code} />
   },
+  h1: createHeading(1),
+  h2: createHeading(2),
+  h3: createHeading(3),
+  h4: createHeading(4),
+  h5: createHeading(5),
+  h6: createHeading(6),
 }
 
 // ───────── WordPress HTML → markdown 转换 ─────────
@@ -150,10 +174,25 @@ function htmlToText(html: string): string {
     br.replaceWith('\n')
   })
 
-  const blockSelectors = 'p, div, li, h1, h2, h3, h4, h5, h6, tr, blockquote, pre, hr'
+  // 处理列表项：<li> → "- 内容\n"
+  div.querySelectorAll('li').forEach((li) => {
+    const isOrdered = li.closest('ol') !== null
+    li.before(isOrdered ? '1. ' : '- ')
+    li.after('\n')
+    li.replaceWith(...Array.from(li.childNodes))
+  })
+
+  // 处理 <ul>/<ol>：前后加空行分隔
+  div.querySelectorAll('ul, ol').forEach((list) => {
+    list.before('\n')
+    list.after('\n')
+    list.replaceWith(...Array.from(list.childNodes))
+  })
+
+  const blockSelectors = 'p, div, h1, h2, h3, h4, h5, h6, tr, blockquote, pre, hr'
   div.querySelectorAll(blockSelectors).forEach((el) => {
     el.after('\n\n')
-    el.replaceWith(...el.childNodes)
+    el.replaceWith(...Array.from(el.childNodes))
   })
 
   return div.textContent || ''
@@ -175,6 +214,12 @@ function fixWpTexturize(text: string): string {
     .replace(/\u201d/g, '"')
 
   result = result.replace(/\u2026/g, '...')
+
+  // WordPress 把用户输入的连字符 "---" 和 "--" 转成短破折号/长破折号
+  // 把 –（en dash U+2013, &#8211;）转回普通连字符，以便 markdown 列表识别
+  result = result.replace(/\u2013/g, '-')
+  // 把 —（em dash U+2014, &#8212;）转回 --
+  result = result.replace(/\u2014/g, '--')
 
   return result
 }

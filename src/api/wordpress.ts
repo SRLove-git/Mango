@@ -304,4 +304,81 @@ export async function getTopic(slug: string): Promise<Topic | null> {
   }
 }
 
-export type { WPPost, WPCategory }
+/* =====================================================
+ * Wiki 系统
+ * ===================================================== */
+
+export interface WikiPageNode {
+  id: string
+  title: string
+  content: string
+  parent: string
+  order: number
+  icon?: string
+}
+
+export interface WikiTreeItem {
+  id: string
+  title: string
+  icon: string
+  parent: string
+  order: number
+  children: WikiTreeItem[]
+}
+
+export interface WikiProject {
+  id: string
+  name: string
+  title: string
+  subtitle: string
+  icon: string
+  homepage: string
+  page_count?: number
+}
+
+export interface WikiProjectDetail extends WikiProject {
+  tree: WikiTreeItem[]
+  pages: WikiPageNode[]
+  page?: WikiPageNode
+  prev?: { slug: string; title: string } | null
+  next?: { slug: string; title: string } | null
+}
+
+export async function getWikiProjects(): Promise<WikiProject[]> {
+  const siteUrl = (window as any).MANGO_DATA?.siteUrl || ''
+  const url = `${siteUrl}/wp-json/mango/v1/wiki`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
+  }
+}
+
+export async function getWikiProject(project: string): Promise<WikiProjectDetail | null> {
+  const siteUrl = (window as any).MANGO_DATA?.siteUrl || ''
+  const url = `${siteUrl}/wp-json/mango/v1/wiki/${encodeURIComponent(project)}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getWikiPage(project: string, slug: string): Promise<WikiProjectDetail | null> {
+  const siteUrl = (window as any).MANGO_DATA?.siteUrl || ''
+  const url = `${siteUrl}/wp-json/mango/v1/wiki/${encodeURIComponent(project)}/${encodeURIComponent(slug)}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+export type { WPCategory }

@@ -1,10 +1,12 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
-import ProgressBar from './ProgressBar'
+import { Link, useNavigate } from 'react-router-dom'
+import PageTransition from './PageTransition'
 import CategoryBar from './CategoryBar'
 import Sidebar from './Sidebar'
 import { useState, useEffect } from 'react'
 import type { WPCategory, WPMenuItem, Topic } from '../api/wordpress'
 import { getCategories, getTags, getUser, getMenu, getCategoryMenu, getTopics } from '../api/wordpress'
+import SiteDataContext from '../context/SiteDataContext'
+import { ArticleTocProvider } from '../context/ArticleTocContext'
 
 export default function Layout() {
   const navigate = useNavigate()
@@ -15,6 +17,7 @@ export default function Layout() {
   const [categoryMenu, setCategoryMenu] = useState<WPMenuItem[]>([])
   const [topics, setTopics] = useState<Topic[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const sidebarPosition = (window as any).MANGO_DATA?.layout?.sidebar_position || 'right'
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {})
@@ -33,9 +36,9 @@ export default function Layout() {
   }
 
   return (
+    <SiteDataContext.Provider value={{ user, categories, tags, topics }}>
+    <ArticleTocProvider>
     <div className="site-wrapper">
-      <ProgressBar />
-
       {/* Header / Navbar — 借鉴 Firefly 的粘性导航栏 */}
       <header className="header">
         <Link to="/" className="logo">Mango</Link>
@@ -78,16 +81,11 @@ export default function Layout() {
       </header>
 
       {/* ===== Main Grid — 借鉴 Firefly 的响应式 Grid 布局 ===== */}
-      <div className="main-grid">
+      <div className={`main-grid${sidebarPosition === 'none' ? ' main-grid--no-sidebar' : ''}`}>
         {/* Left Sidebar — md 断点以上显示 */}
-        <Sidebar
-          side="left"
-          user={user}
-          categories={categories}
-          tags={tags}
-          topics={topics}
-          className="sidebar-left-grid"
-        />
+        {sidebarPosition !== 'none' && (
+          <Sidebar side="left" className="sidebar-left-grid" />
+        )}
 
         {/* Content Wrapper */}
         <div className="content-wrapper">
@@ -95,18 +93,14 @@ export default function Layout() {
           <CategoryBar categories={categories} menuItems={categoryMenu} />
 
           <main className="main-content">
-            <Outlet />
+            <PageTransition />
           </main>
         </div>
 
         {/* Right Sidebar — xl 断点以上显示 */}
-        <Sidebar
-          side="right"
-          user={user}
-          categories={categories}
-          tags={tags}
-          className="sidebar-right-grid"
-        />
+        {sidebarPosition !== 'none' && (
+          <Sidebar side="right" className="sidebar-right-grid" />
+        )}
       </div>
 
       {/* Footer */}
@@ -128,5 +122,7 @@ export default function Layout() {
         </p>
       </footer>
     </div>
+    </ArticleTocProvider>
+    </SiteDataContext.Provider>
   )
 }

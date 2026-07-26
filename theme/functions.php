@@ -18,6 +18,7 @@ $modules = [
     'customizer.php',
     'links.php',
     'topics.php',
+    'wiki.php',
     'admin.php',
 ];
 

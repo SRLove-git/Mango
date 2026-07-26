@@ -42,7 +42,7 @@ export default function Home() {
   } else if (useFallback) {
     heroBgImage = `url(${getRandomImageUrl(heroPost?.id)})`
   } else {
-    heroBgImage = 'linear-gradient(135deg, var(--purple), var(--blue))'
+    heroBgImage = 'linear-gradient(135deg, var(--accent), var(--accent-secondary))'
   }
 
   return (

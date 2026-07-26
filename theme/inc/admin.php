@@ -83,7 +83,7 @@ function mango_render_admin_page(): void {
 				'id'   => 'custom_' . uniqid(),
 				'name' => sanitize_text_field( $_POST['mango_new_scheme_name'] ),
 			];
-			$color_keys = [ 'bg', 'glass', 'glass_hover', 'border', 'border_hover', 'purple', 'purple_glow', 'blue', 'blue_glow', 'text', 'text_muted', 'text_dim' ];
+			$color_keys = [ 'bg', 'glass', 'glass_hover', 'border', 'border_hover', 'accent', 'accent_glow', 'text', 'text_muted', 'text_dim' ];
 			foreach ( $color_keys as $k ) {
 				$new_scheme[ $k ] = sanitize_hex_color( $_POST[ 'mango_new_' . $k ] ?? '' );
 			}
@@ -96,7 +96,7 @@ function mango_render_admin_page(): void {
 			$edit_ids = $_POST['mango_edit_scheme'];
 			foreach ( $schemes as &$s ) {
 				if ( isset( $edit_ids[ $s['id'] ] ) ) {
-					$color_keys = [ 'bg', 'glass', 'glass_hover', 'border', 'border_hover', 'purple', 'purple_glow', 'blue', 'blue_glow', 'text', 'text_muted', 'text_dim' ];
+					$color_keys = [ 'bg', 'glass', 'glass_hover', 'border', 'border_hover', 'accent', 'accent_glow', 'text', 'text_muted', 'text_dim' ];
 					foreach ( $color_keys as $k ) {
 						$s[ $k ] = sanitize_hex_color( $_POST[ 'mango_color_' . $s['id'] . '_' . $k ] ?? '' );
 					}
@@ -142,6 +142,36 @@ function mango_render_admin_page(): void {
 				'show_categories'=> isset( $_POST['mango_show_categories'] ) ? '1' : '0',
 			];
 			set_theme_mod( 'mango_post_display_settings', $post_display );
+		}
+
+		// 侧边栏管理（侧边栏 tab）
+		if ( isset( $_POST['mango_sidebar_widgets'] ) ) {
+			$raw     = json_decode( wp_unslash( $_POST['mango_sidebar_widgets'] ), true );
+			$widgets = [];
+			if ( is_array( $raw ) ) {
+				$valid_types = [ 'profile', 'categories', 'tags', 'topics', 'wiki_tree', 'toc', 'about', 'site_info', 'custom_html' ];
+				$valid_pages = [ 'home', 'post', 'category', 'topic', 'topics', 'wiki', 'wiki_list', 'search', 'archive', 'page', 'links' ];
+				foreach ( $raw as $w ) {
+					$display_on = [];
+					if ( ! empty( $w['display_on'] ) && is_array( $w['display_on'] ) ) {
+						foreach ( $w['display_on'] as $p ) {
+							if ( in_array( $p, $valid_pages, true ) ) {
+								$display_on[] = $p;
+							}
+						}
+					}
+					$widgets[] = [
+						'id'         => sanitize_text_field( $w['id'] ?? 'w_' . uniqid() ),
+						'side'       => in_array( $w['side'] ?? '', [ 'left', 'right' ] ) ? $w['side'] : 'left',
+						'type'       => in_array( $w['type'] ?? '', $valid_types ) ? $w['type'] : 'profile',
+						'title'      => sanitize_text_field( $w['title'] ?? '' ),
+						'content'    => wp_kses_post( $w['content'] ?? '' ),
+						'order'      => intval( $w['order'] ?? 0 ),
+						'display_on' => $display_on,
+					];
+				}
+			}
+			update_option( 'mango_sidebar_widgets', $widgets );
 		}
 
 		// 社交链接（高级设置 tab）
@@ -203,6 +233,19 @@ function mango_render_admin_page(): void {
 	$show_date      = $post_display['show_date'] ?? '1';
 	$show_categories= $post_display['show_categories'] ?? '1';
 
+	// 读取侧边栏配置
+	$sidebar_widgets = get_option( 'mango_sidebar_widgets', [] );
+	if ( empty( $sidebar_widgets ) ) {
+		$sidebar_widgets = [
+			[ 'id' => 'w_profile', 'side' => 'left', 'type' => 'profile', 'title' => '', 'content' => '', 'order' => 1, 'display_on' => [] ],
+			[ 'id' => 'w_categories', 'side' => 'left', 'type' => 'categories', 'title' => '', 'content' => '', 'order' => 2, 'display_on' => [] ],
+			[ 'id' => 'w_topics', 'side' => 'left', 'type' => 'topics', 'title' => '', 'content' => '', 'order' => 3, 'display_on' => [] ],
+			[ 'id' => 'w_about', 'side' => 'left', 'type' => 'about', 'title' => '', 'content' => 'Mango 是一个基于 WordPress + React 的个人博客主题，追求极致的视觉体验与性能。', 'order' => 4, 'display_on' => [] ],
+			[ 'id' => 'w_tags', 'side' => 'right', 'type' => 'tags', 'title' => '', 'content' => '', 'order' => 1, 'display_on' => [] ],
+			[ 'id' => 'w_site_info', 'side' => 'right', 'type' => 'site_info', 'title' => '', 'content' => '', 'order' => 2, 'display_on' => [] ],
+		];
+	}
+
 	// 读取社交链接
 	$social_links = get_option( 'mango_social_links', [] );
 
@@ -260,6 +303,16 @@ function mango_render_admin_page(): void {
 				   class="mango-sidebar-tab <?php echo $tab === 'topics' ? 'active' : ''; ?>">
 					<span class="dashicons dashicons-welcome-write-blog"></span>
 					<span class="mango-tab-label"><?php _e( '专栏管理', 'mango' ); ?></span>
+				</a>
+				<a href="?page=mango-settings&tab=sidebar"
+				   class="mango-sidebar-tab <?php echo $tab === 'sidebar' ? 'active' : ''; ?>">
+					<span class="dashicons dashicons-layout"></span>
+					<span class="mango-tab-label"><?php _e( '侧边栏', 'mango' ); ?></span>
+				</a>
+				<a href="?page=mango-settings&tab=wiki"
+				   class="mango-sidebar-tab <?php echo $tab === 'wiki' ? 'active' : ''; ?>">
+					<span class="dashicons dashicons-book-alt"></span>
+					<span class="mango-tab-label"><?php _e( 'Wiki 管理', 'mango' ); ?></span>
 				</a>
 				<a href="?page=mango-settings&tab=advanced"
 				   class="mango-sidebar-tab <?php echo $tab === 'advanced' ? 'active' : ''; ?>">
@@ -998,13 +1051,12 @@ function mango_render_admin_page(): void {
 						$scheme_color_fields = [
 							'bg' => '背景', 'glass' => '卡片背景', 'glass_hover' => '卡片悬停',
 							'border' => '边框', 'border_hover' => '边框悬停',
-							'purple' => '主色', 'purple_glow' => '主色光晕',
-							'blue' => '强调色', 'blue_glow' => '强调色光晕',
+							'accent' => '主题色', 'accent_glow' => '主题色光晕',
 							'text' => '正文', 'text_muted' => '次级文字', 'text_dim' => '弱化文字',
 						];
 						$scheme_defaults = [
 							'bg' => '', 'glass' => '', 'glass_hover' => '', 'border' => '', 'border_hover' => '',
-							'purple' => '#9b6cff', 'purple_glow' => '', 'blue' => '#4da3ff', 'blue_glow' => '',
+							'accent' => '#2dd4bf', 'accent_glow' => '',
 							'text' => '', 'text_muted' => '', 'text_dim' => '',
 						];
 						?>
@@ -1021,12 +1073,11 @@ function mango_render_admin_page(): void {
 										<input type="radio" name="mango_theme_style" value="<?php echo $s['id']; ?>"
 											<?php checked( $style, $s['id'] ); ?>>
 										<div class="mango-scheme-preview">
-											<span style="background:<?php echo $s['purple'] ?: '#9b6cff'; ?>"></span>
-											<span style="background:<?php echo $s['blue'] ?: '#4da3ff'; ?>"></span>
+											<span style="background:<?php echo $s['accent'] ?: '#2dd4bf'; ?>"></span>
 										</div>
 										<div class="mango-scheme-info">
 											<strong><?php echo esc_html( $s['name'] ); ?></strong>
-											<span><?php printf( __( '主色 %s · 强调色 %s', 'mango' ), $s['purple'] ?: '默认', $s['blue'] ?: '默认' ); ?></span>
+											<span><?php printf( __( '主题色 %s', 'mango' ), $s['accent'] ?: '默认' ); ?></span>
 										</div>
 									</label>
 
@@ -1171,6 +1222,935 @@ function mango_render_admin_page(): void {
 							</tr>
 						</table>
 					</div>
+
+					<p class="submit">
+						<button type="submit" name="mango_save" class="button button-primary">
+							<?php _e( '保存设置', 'mango' ); ?>
+						</button>
+					</p>
+
+					<?php elseif ( $tab === 'sidebar' ): /* === 侧边栏管理选项卡 === */ ?>
+
+					<h2><?php _e( '侧边栏管理', 'mango' ); ?></h2>
+					<p class="description"><?php _e( '管理左侧栏和右侧栏显示的模块。可以添加、删除和排序，自定义每个模块的标题。', 'mango' ); ?></p>
+
+					<?php
+					$widget_types = [
+						'profile'     => __( '个人资料', 'mango' ),
+						'categories'  => __( '分类列表', 'mango' ),
+						'tags'        => __( '标签云', 'mango' ),
+						'topics'      => __( '专栏列表', 'mango' ),
+						'wiki_tree'   => __( 'Wiki 页面树', 'mango' ),
+						'toc'         => __( '文章目录', 'mango' ),
+						'about'       => __( '自定义文本', 'mango' ),
+						'site_info'   => __( '站点信息', 'mango' ),
+						'custom_html' => __( '自定义 HTML', 'mango' ),
+					];
+					$widget_type_needs_content = [ 'about', 'custom_html' ];
+					$widget_type_has_default_title = [ 'profile', 'categories', 'tags', 'topics', 'wiki_tree', 'toc', 'site_info' ];
+					$page_types = [
+						'home'     => __( '首页', 'mango' ),
+						'post'     => __( '文章页', 'mango' ),
+						'category' => __( '分类页', 'mango' ),
+						'topic'    => __( '专栏详情', 'mango' ),
+						'topics'   => __( '专栏列表', 'mango' ),
+						'wiki'     => __( 'Wiki 详情', 'mango' ),
+						'wiki_list' => __( 'Wiki 列表', 'mango' ),
+						'archive'  => __( '归档', 'mango' ),
+						'page'     => __( '页面', 'mango' ),
+						'search'   => __( '搜索页', 'mango' ),
+						'links'    => __( '链接页', 'mango' ),
+					];
+					?>
+
+					<div id="mango-sidebar-admin">
+						<input type="hidden" name="mango_sidebar_widgets" id="mango-sidebar-widgets-input" value=''>
+						<div class="mango-sidebar-toolbar">
+							<button type="button" class="button mango-btn-add-widget">
+								<span class="dashicons dashicons-plus-alt2"></span>
+								<?php _e( '添加模块', 'mango' ); ?>
+							</button>
+						</div>
+
+						<div class="mango-widget-form-new" id="mango-widget-form-new" style="display:none;">
+							<div class="mango-widget-form-inner">
+								<h4><?php _e( '添加新模块', 'mango' ); ?></h4>
+								<div class="mango-widget-fields">
+									<div class="mango-field-row">
+										<div class="mango-field">
+											<label for="mango_new_widget_side"><?php _e( '显示位置', 'mango' ); ?></label>
+											<select id="mango_new_widget_side" class="mango-input">
+												<option value="left"><?php _e( '左侧栏', 'mango' ); ?></option>
+												<option value="right"><?php _e( '右侧栏', 'mango' ); ?></option>
+											</select>
+										</div>
+										<div class="mango-field">
+											<label for="mango_new_widget_type"><?php _e( '模块类型', 'mango' ); ?></label>
+											<select id="mango_new_widget_type" class="mango-input">
+												<?php foreach ( $widget_types as $type => $label ): ?>
+													<option value="<?php echo $type; ?>"><?php echo $label; ?></option>
+												<?php endforeach; ?>
+											</select>
+										</div>
+									</div>
+									<div class="mango-field">
+										<label for="mango_new_widget_title"><?php _e( '自定义标题', 'mango' ); ?></label>
+										<input type="text" id="mango_new_widget_title" class="mango-input" placeholder="<?php _e( '留空使用默认标题', 'mango' ); ?>">
+										<p class="mango-field-desc"><?php _e( '留空则使用模块类型的默认标题。', 'mango' ); ?></p>
+									</div>
+									<div class="mango-field" id="mango-new-widget-content-field" style="display:none;">
+										<label for="mango_new_widget_content"><?php _e( '内容', 'mango' ); ?></label>
+										<textarea id="mango_new_widget_content" class="mango-input mango-textarea" rows="4" placeholder="<?php _e( '输入文本或 HTML 内容...', 'mango' ); ?>"></textarea>
+									</div>
+									<div class="mango-field">
+										<label><?php _e( '显示页面', 'mango' ); ?></label>
+										<p class="mango-field-desc"><?php _e( '不勾选则所有页面显示', 'mango' ); ?></p>
+										<div class="mango-page-checkboxes" id="mango-new-widget-pages">
+											<?php foreach ( $page_types as $key => $label ): ?>
+											<label class="mango-page-checkbox-label">
+												<input type="checkbox" class="mango-page-checkbox" value="<?php echo $key; ?>">
+												<?php echo $label; ?>
+											</label>
+											<?php endforeach; ?>
+										</div>
+									</div>
+								</div>
+								<div class="mango-widget-form-actions">
+									<button type="button" class="button button-primary mango-btn-save-new-widget"><?php _e( '添加', 'mango' ); ?></button>
+									<button type="button" class="button mango-btn-cancel-new-widget"><?php _e( '取消', 'mango' ); ?></button>
+								</div>
+							</div>
+						</div>
+
+						<div class="mango-widgets-group">
+							<h3 class="mango-widgets-group-title">
+								<span class="dashicons dashicons-align-left"></span>
+								<?php _e( '左侧栏', 'mango' ); ?>
+							</h3>
+							<div id="mango-widgets-left" class="mango-widgets-list" data-side="left"></div>
+							<p class="mango-widgets-empty"><?php _e( '暂无模块，点击上方按钮添加。', 'mango' ); ?></p>
+						</div>
+
+						<div class="mango-widgets-group">
+							<h3 class="mango-widgets-group-title">
+								<span class="dashicons dashicons-align-right"></span>
+								<?php _e( '右侧栏', 'mango' ); ?>
+							</h3>
+							<div id="mango-widgets-right" class="mango-widgets-list" data-side="right"></div>
+							<p class="mango-widgets-empty"><?php _e( '暂无模块，点击上方按钮添加。', 'mango' ); ?></p>
+						</div>
+					</div>
+
+					<script>
+					jQuery(function($) {
+						var widgets = <?php echo json_encode( $sidebar_widgets ); ?>;
+						var $input = $('#mango-sidebar-widgets-input');
+						var $newForm = $('#mango-widget-form-new');
+						var typeLabels = <?php echo json_encode( $widget_types ); ?>;
+						var needsContent = <?php echo json_encode( $widget_type_needs_content ); ?>;
+						var pageLabels = <?php echo json_encode( $page_types ); ?>;
+
+						function serialize() { $input.val(JSON.stringify(widgets)); }
+
+						function render() {
+							$('#mango-widgets-left, #mango-widgets-right').each(function() {
+								var side = $(this).data('side');
+								var list = widgets.filter(function(w) { return w.side === side; });
+								list.sort(function(a, b) { return a.order - b.order; });
+								var html = '';
+								$.each(list, function(i, w) {
+									var label = typeLabels[w.type] || w.type;
+									var titleDisplay = w.title || '(' + label + ')';
+									html += '<div class="mango-widget-card" data-id="' + w.id + '">';
+									html += '<div class="mango-widget-card-body">';
+									html += '<div class="mango-widget-card-main">';
+									html += '<span class="mango-widget-type-badge">' + label + '</span>';
+									html += '<span class="mango-widget-title-display">' + $('<span>').text(titleDisplay).html() + '</span>';
+									html += '</div><div class="mango-widget-card-actions">';
+									html += '<button type="button" class="button mango-widget-btn-up" title="上移"><span class="dashicons dashicons-arrow-up-alt2"></span></button>';
+									html += '<button type="button" class="button mango-widget-btn-down" title="下移"><span class="dashicons dashicons-arrow-down-alt2"></span></button>';
+									html += '<button type="button" class="button mango-widget-btn-edit" title="编辑"><span class="dashicons dashicons-edit"></span></button>';
+									html += '<button type="button" class="button mango-widget-btn-delete" title="删除"><span class="dashicons dashicons-trash"></span></button>';
+									html += '</div></div>';
+									html += '<div class="mango-widget-inline-edit" style="display:none;">';
+									html += '<div class="mango-widget-inline-fields">';
+									html += '<div class="mango-field"><label>显示位置</label><select class="mango-input mango-inline-side">';
+									html += '<option value="left"' + (w.side === 'left' ? ' selected' : '') + '>左侧栏</option>';
+									html += '<option value="right"' + (w.side === 'right' ? ' selected' : '') + '>右侧栏</option>';
+									html += '</select></div>';
+									html += '<div class="mango-field"><label>模块类型</label><select class="mango-input mango-inline-type">';
+									$.each(typeLabels, function(t, l) { html += '<option value="' + t + '"' + (w.type === t ? ' selected' : '') + '>' + l + '</option>'; });
+									html += '</select></div>';
+									html += '<div class="mango-field mango-inline-title-field"><label>自定义标题</label>';
+									html += '<input type="text" class="mango-input mango-inline-title" value="' + $('<span>').text(w.title || '').html() + '" placeholder="留空使用默认标题">';
+									html += '</div>';
+									html += '<div class="mango-field mango-inline-content-field"' + ($.inArray(w.type, needsContent) === -1 ? ' style="display:none;"' : '') + '><label>内容</label>';
+									html += '<textarea class="mango-input mango-textarea mango-inline-content" rows="3">' + $('<span>').text(w.content || '').html() + '</textarea>';
+									html += '</div>';
+									html += '<div class="mango-field"><label>显示页面</label><p class="mango-field-desc" style="margin:0 0 6px;font-size:11px;color:#666;">不勾选则所有页面显示</p><div class="mango-page-checkboxes mango-inline-pages" data-widget-id="' + w.id + '">';
+									$.each(pageLabels, function(pk, pl) {
+										var checked = w.display_on && $.inArray(pk, w.display_on) !== -1 ? ' checked' : '';
+										html += '<label class="mango-page-checkbox-label"><input type="checkbox" class="mango-page-checkbox" value="' + pk + '"' + checked + '>' + pl + '</label>';
+									});
+									html += '</div></div></div>';
+									html += '<div class="mango-widget-inline-actions">';
+									html += '<button type="button" class="button button-primary mango-btn-save-edit">保存修改</button>';
+									html += '<button type="button" class="button mango-btn-cancel-edit">取消</button>';
+									html += '</div></div></div>';
+								});
+								$(this).html(html);
+								var $group = $(this).closest('.mango-widgets-group');
+								$group.find('.mango-widgets-empty').toggle(list.length === 0);
+							});
+							serialize();
+						}
+
+						$('.mango-btn-add-widget').on('click', function() { $newForm.slideToggle(180); $('.mango-widget-inline-edit:visible').slideUp(180); });
+						$('.mango-btn-cancel-new-widget').on('click', function() { $newForm.slideUp(180); $newForm.find('input, textarea').val(''); $('#mango-new-widget-content-field').hide(); });
+						$('#mango_new_widget_type').on('change', function() { $('#mango-new-widget-content-field').toggle($.inArray($(this).val(), needsContent) !== -1); });
+
+						$('.mango-btn-save-new-widget').on('click', function() {
+							var side = $('#mango_new_widget_side').val(), type = $('#mango_new_widget_type').val();
+							var title = $('#mango_new_widget_title').val().trim(), content = $('#mango_new_widget_content').val().trim();
+							var sideWidgets = widgets.filter(function(w) { return w.side === side; });
+							var maxOrder = 0; $.each(sideWidgets, function(i, w) { if (w.order > maxOrder) maxOrder = w.order; });
+							var displayOn = [];
+							$('#mango-new-widget-pages .mango-page-checkbox:checked').each(function() { displayOn.push($(this).val()); });
+							widgets.push({ id: 'w_' + Date.now(), side: side, type: type, title: title, content: content, order: maxOrder + 1, display_on: displayOn });
+							render(); $newForm.slideUp(180); $newForm.find('input, textarea').val(''); $('#mango-new-widget-pages .mango-page-checkbox').prop('checked', false);
+						});
+
+						$(document).on('click', '.mango-widget-btn-edit', function() {
+							var $card = $(this).closest('.mango-widget-card'), $editForm = $card.find('.mango-widget-inline-edit');
+							$('.mango-widget-inline-edit:visible').not($editForm).slideUp(180); $newForm.slideUp(180); $editForm.slideToggle(180);
+							var type = $editForm.find('.mango-inline-type').val();
+							$editForm.find('.mango-inline-content-field').toggle($.inArray(type, needsContent) !== -1);
+						});
+						$(document).on('change', '.mango-inline-type', function() {
+							var $f = $(this).closest('.mango-widget-inline-edit');
+							$f.find('.mango-inline-content-field').toggle($.inArray($(this).val(), needsContent) !== -1);
+						});
+						$(document).on('click', '.mango-btn-cancel-edit', function() { $(this).closest('.mango-widget-inline-edit').slideUp(180); });
+						$(document).on('click', '.mango-btn-save-edit', function() {
+							var $card = $(this).closest('.mango-widget-card'), id = $card.data('id'), $f = $card.find('.mango-widget-inline-edit');
+							var idx = -1; $.each(widgets, function(i, w) { if (w.id === id) { idx = i; return false; } });
+							if (idx === -1) return;
+							widgets[idx].side = $f.find('.mango-inline-side').val();
+							widgets[idx].type = $f.find('.mango-inline-type').val();
+							widgets[idx].title = $f.find('.mango-inline-title').val().trim();
+							widgets[idx].content = $f.find('.mango-inline-content').val().trim();
+							var displayOn = [];
+							$f.find('.mango-inline-pages .mango-page-checkbox:checked').each(function() { displayOn.push($(this).val()); });
+							widgets[idx].display_on = displayOn;
+							render();
+						});
+						$(document).on('click', '.mango-widget-btn-delete', function() {
+							if (!confirm('确定要删除此模块吗？')) return;
+							widgets = $.grep(widgets, function(w) { return w.id !== $(this).closest('.mango-widget-card').data('id'); });
+							render();
+						});
+						$(document).on('click', '.mango-widget-btn-up', function() {
+							var $card = $(this).closest('.mango-widget-card'), id = $card.data('id'), prev = $card.prev('.mango-widget-card');
+							if (prev.length === 0) return;
+							var cur, prv; $.each(widgets, function(i, w) { if (w.id === id) cur = i; if (w.id === prev.data('id')) prv = i; });
+							if (cur === undefined || prv === undefined) return;
+							var t = widgets[cur].order; widgets[cur].order = widgets[prv].order; widgets[prv].order = t; render();
+						});
+						$(document).on('click', '.mango-widget-btn-down', function() {
+							var $card = $(this).closest('.mango-widget-card'), id = $card.data('id'), next = $card.next('.mango-widget-card');
+							if (next.length === 0) return;
+							var cur, nxt; $.each(widgets, function(i, w) { if (w.id === id) cur = i; if (w.id === next.data('id')) nxt = i; });
+							if (cur === undefined || nxt === undefined) return;
+							var t = widgets[cur].order; widgets[cur].order = widgets[nxt].order; widgets[nxt].order = t; render();
+						});
+
+						// Delete button fix
+						$(document).on('click', '.mango-widget-btn-delete', function() {
+							if (!confirm('确定要删除此模块吗？')) return;
+							var id = $(this).closest('.mango-widget-card').data('id');
+							widgets = $.grep(widgets, function(w) { return w.id !== id; });
+							render();
+						});
+
+						render();
+					});
+					</script>
+
+					<style>
+					#mango-sidebar-admin { max-width: 820px; }
+					.mango-sidebar-toolbar { margin-bottom: 16px; }
+					.mango-btn-add-widget {
+						display: inline-flex !important; align-items: center; gap: 4px;
+						background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+						color: #fff !important; border: none !important; border-radius: 8px !important;
+						padding: 6px 18px !important; font-size: 13px !important; font-weight: 600 !important;
+						box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2); cursor: pointer;
+					}
+					.mango-btn-add-widget:hover {
+						background: linear-gradient(135deg, #6d28d9, #5b21b6) !important;
+						box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3) !important; transform: translateY(-1px);
+					}
+					.mango-btn-add-widget .dashicons { font-size: 16px; width: 16px; height: 16px; color: #fff; }
+					.mango-widget-form-new { margin-bottom: 16px; }
+					.mango-widget-form-inner { background: #fafbfc; border: 1.5px dashed #c4b5fd; border-radius: 10px; padding: 20px; }
+					.mango-widget-form-inner h4 { margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #334155; }
+					.mango-widget-form-actions { display: flex; gap: 8px; margin-top: 16px; }
+					.mango-widget-form-actions .button-primary {
+						background: linear-gradient(135deg, #7c3aed, #6d28d9) !important; border: none !important;
+						border-radius: 6px !important; padding: 6px 20px !important; font-size: 13px !important;
+						font-weight: 600 !important; color: #fff !important;
+						box-shadow: 0 2px 6px rgba(124, 58, 237, 0.2) !important;
+					}
+					.mango-widget-fields .mango-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+					.mango-widget-fields .mango-field { display: flex; flex-direction: column; gap: 4px; }
+					.mango-widget-fields .mango-field label { font-size: 12px; font-weight: 600; color: #475569; }
+					.mango-widget-fields .mango-input {
+						border: 1.5px solid #e2e8f0 !important; border-radius: 6px !important;
+						padding: 6px 10px !important; font-size: 13px !important; box-shadow: none !important; width: 100% !important;
+					}
+					.mango-widget-fields .mango-input:focus { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.1) !important; outline: none !important; }
+					.mango-widget-fields .mango-field-desc { margin: 2px 0 0 !important; font-size: 11.5px !important; color: #94a3b8 !important; }
+					.mango-widgets-group { margin-bottom: 24px; }
+					.mango-widgets-group-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #334155; margin: 0 0 12px; padding: 0 0 8px; border-bottom: 2px solid #f1f5f9; }
+					.mango-widgets-group-title .dashicons { font-size: 18px; width: 18px; height: 18px; color: #7c3aed; }
+					.mango-widgets-list { display: flex; flex-direction: column; gap: 8px; }
+					.mango-widget-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+					.mango-widget-card-body { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; gap: 12px; }
+					.mango-widget-card-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+					.mango-widget-type-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; background: #f5f3ff; color: #7c3aed; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+					.mango-widget-title-display { font-size: 13px; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+					.mango-widget-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+					.mango-widget-card-actions .button { padding: 4px 6px !important; min-height: 0 !important; line-height: 1 !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important; background: #fff !important; color: #64748b !important; }
+					.mango-widget-card-actions .button:hover { border-color: #c4b5fd !important; color: #7c3aed !important; background: #f5f3ff !important; }
+					.mango-widget-card-actions .button .dashicons { font-size: 14px; width: 14px; height: 14px; }
+					.mango-widget-inline-edit { border-top: 1px solid #eef2f6; padding: 14px 16px; background: #fafbfc; }
+					.mango-widget-inline-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+					.mango-widget-inline-fields .mango-field { display: flex; flex-direction: column; gap: 3px; }
+					.mango-widget-inline-fields .mango-field label { font-size: 11.5px; font-weight: 600; color: #475569; }
+					.mango-widget-inline-fields .mango-inline-title-field, .mango-widget-inline-fields .mango-inline-content-field { grid-column: 1 / -1; }
+					.mango-widget-inline-fields .mango-input { border: 1.5px solid #e2e8f0 !important; border-radius: 6px !important; padding: 5px 8px !important; font-size: 12.5px !important; box-shadow: none !important; width: 100% !important; }
+					.mango-widget-inline-fields .mango-input:focus { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.1) !important; outline: none !important; }
+					.mango-widget-inline-actions { display: flex; gap: 8px; }
+					.mango-widget-inline-actions .button-primary {
+						background: linear-gradient(135deg, #7c3aed, #6d28d9) !important; border: none !important;
+						border-radius: 6px !important; padding: 4px 16px !important; font-size: 12.5px !important;
+						font-weight: 600 !important; color: #fff !important; box-shadow: 0 2px 6px rgba(124,58,237,0.2) !important;
+					}
+					.mango-widgets-empty { text-align: center; padding: 24px 16px; background: #fafbfc; border: 1.5px dashed #e2e8f0; border-radius: 8px; font-size: 13px; color: #94a3b8; margin: 0; }
+					.mango-widget-inline-fields .mango-field:has(.mango-inline-pages) { grid-column: 1 / -1; }
+					.mango-page-checkboxes { display: flex; flex-wrap: wrap; gap: 6px; }
+					.mango-page-checkbox-label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #475569; cursor: pointer; padding: 2px 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; transition: all 0.15s; }
+					.mango-page-checkbox-label:hover { border-color: #c4b5fd; background: #f5f3ff; }
+					.mango-page-checkbox-label input[type="checkbox"] { margin: 0; accent-color: #7c3aed; }
+					</style>
+
+					<p class="submit">
+						<button type="submit" name="mango_save" class="button button-primary">
+							<?php _e( '保存设置', 'mango' ); ?>
+						</button>
+					</p>
+
+					<?php elseif ( $tab === 'wiki' ): /* === Wiki 管理选项卡 === */ ?>
+
+					<h2><?php _e( 'Wiki 管理', 'mango' ); ?></h2>
+					<p class="description"><?php _e( '管理 Wiki 知识库项目。每个项目包含一个页面树，用于展示项目文档或个人知识库。', 'mango' ); ?></p>
+
+					<?php
+					$wiki_data = get_option( 'mango_wiki', [] );
+					?>
+					<script>var mangoWikiData = <?php echo json_encode( $wiki_data ); ?>;</script>
+
+					<div id="mango-wiki-admin">
+						<!-- 工具栏 -->
+						<div class="mango-wiki-toolbar">
+							<button type="button" class="button mango-btn-add-project">
+								<span class="dashicons dashicons-plus-alt2"></span>
+								<?php _e( '新建 Wiki 项目', 'mango' ); ?>
+							</button>
+						</div>
+
+						<!-- 新建项目表单 -->
+						<div class="mango-wiki-project-form-new" id="mango-wiki-project-form-new" style="display:none;">
+							<div class="mango-wiki-form-inner">
+								<h4><?php _e( '新建 Wiki 项目', 'mango' ); ?></h4>
+								<div class="mango-wiki-fields">
+									<div class="mango-field-row">
+										<div class="mango-field">
+											<label for="mango_new_wiki_slug"><?php _e( '项目 ID', 'mango' ); ?></label>
+											<input type="text" id="mango_new_wiki_slug" class="mango-input" placeholder="stellar">
+											<p class="mango-field-desc"><?php _e( '唯一标识，只能包含小写字母、数字、连字符。', 'mango' ); ?></p>
+										</div>
+										<div class="mango-field">
+											<label for="mango_new_wiki_name"><?php _e( '短名称', 'mango' ); ?></label>
+											<input type="text" id="mango_new_wiki_name" class="mango-input" placeholder="Stellar">
+											<p class="mango-field-desc"><?php _e( '用于导航显示。', 'mango' ); ?></p>
+										</div>
+									</div>
+									<div class="mango-field-row">
+										<div class="mango-field">
+											<label for="mango_new_wiki_title"><?php _e( '完整标题', 'mango' ); ?></label>
+											<input type="text" id="mango_new_wiki_title" class="mango-input" placeholder="Stellar 主题文档">
+										</div>
+										<div class="mango-field">
+											<label for="mango_new_wiki_subtitle"><?php _e( '副标题', 'mango' ); ?></label>
+											<input type="text" id="mango_new_wiki_subtitle" class="mango-input" placeholder="每个人的独立博客">
+										</div>
+									</div>
+									<div class="mango-field">
+										<label for="mango_new_wiki_icon"><?php _e( '图标 URL', 'mango' ); ?></label>
+										<input type="url" id="mango_new_wiki_icon" class="mango-input" placeholder="https://example.com/icon.png">
+									</div>
+								</div>
+								<div class="mango-wiki-form-actions">
+									<button type="button" class="button button-primary mango-btn-save-new-project"><?php _e( '保存', 'mango' ); ?></button>
+									<button type="button" class="button mango-btn-cancel-new-project"><?php _e( '取消', 'mango' ); ?></button>
+								</div>
+							</div>
+						</div>
+
+						<!-- 项目列表 -->
+						<div id="mango-wiki-projects">
+							<?php if ( empty( $wiki_data ) ): ?>
+								<div class="mango-wiki-empty">
+									<span class="dashicons dashicons-book-alt"></span>
+									<p><?php _e( '暂无 Wiki 项目，点击上方按钮添加。', 'mango' ); ?></p>
+								</div>
+							<?php else: ?>
+								<?php foreach ( $wiki_data as $slug => $project ):
+									$pages = $project['pages'] ?? [];
+								?>
+									<div class="mango-wiki-project-card" data-slug="<?php echo esc_attr( $slug ); ?>">
+										<div class="mango-wiki-project-header">
+											<div class="mango-wiki-project-info">
+												<div class="mango-wiki-project-icon">
+													<?php if ( ! empty( $project['icon'] ) ): ?>
+														<img src="<?php echo esc_url( $project['icon'] ); ?>" alt="">
+													<?php else: ?>
+														<span class="dashicons dashicons-book-alt"></span>
+													<?php endif; ?>
+												</div>
+												<div class="mango-wiki-project-meta">
+													<strong class="mango-wiki-project-title"><?php echo esc_html( $project['title'] ?? $project['name'] ?? $slug ); ?></strong>
+													<span class="mango-wiki-project-subtitle"><?php echo esc_html( $project['subtitle'] ?? '' ); ?></span>
+													<span class="mango-wiki-project-id">
+														<code><?php echo esc_html( $slug ); ?></code>
+														<span class="mango-wiki-page-count"><?php echo count( $pages ); ?> 页</span>
+													</span>
+												</div>
+											</div>
+											<div class="mango-wiki-project-actions">
+												<button type="button" class="button mango-wiki-btn-edit-project" title="<?php _e( '编辑项目', 'mango' ); ?>">
+													<span class="dashicons dashicons-edit"></span>
+												</button>
+												<button type="button" class="button mango-wiki-btn-add-page" title="<?php _e( '添加页面', 'mango' ); ?>">
+													<span class="dashicons dashicons-plus-alt2"></span>
+												</button>
+												<button type="button" class="button mango-wiki-btn-delete-project" data-slug="<?php echo esc_attr( $slug ); ?>" title="<?php _e( '删除项目', 'mango' ); ?>">
+													<span class="dashicons dashicons-trash"></span>
+												</button>
+											</div>
+										</div>
+
+										<!-- 项目编辑表单（折叠） -->
+										<div class="mango-wiki-project-edit-form" style="display:none;">
+											<div class="mango-wiki-inline-fields">
+												<div class="mango-field">
+													<label><?php _e( '短名称', 'mango' ); ?></label>
+													<input type="text" class="mango-input mango-project-inline-name" value="<?php echo esc_attr( $project['name'] ?? '' ); ?>">
+												</div>
+												<div class="mango-field">
+													<label><?php _e( '完整标题', 'mango' ); ?></label>
+													<input type="text" class="mango-input mango-project-inline-title" value="<?php echo esc_attr( $project['title'] ?? '' ); ?>">
+												</div>
+												<div class="mango-field">
+													<label><?php _e( '副标题', 'mango' ); ?></label>
+													<input type="text" class="mango-input mango-project-inline-subtitle" value="<?php echo esc_attr( $project['subtitle'] ?? '' ); ?>">
+												</div>
+												<div class="mango-field">
+													<label><?php _e( '图标 URL', 'mango' ); ?></label>
+													<input type="url" class="mango-input mango-project-inline-icon" value="<?php echo esc_attr( $project['icon'] ?? '' ); ?>">
+												</div>
+											</div>
+											<div class="mango-wiki-inline-actions">
+												<button type="button" class="button button-primary mango-btn-save-project-edit" data-slug="<?php echo esc_attr( $slug ); ?>"><?php _e( '保存修改', 'mango' ); ?></button>
+												<button type="button" class="button mango-btn-cancel-project-edit"><?php _e( '取消', 'mango' ); ?></button>
+											</div>
+										</div>
+
+										<!-- 页面添加表单（折叠） -->
+										<div class="mango-wiki-page-add-form" style="display:none;" data-project="<?php echo esc_attr( $slug ); ?>">
+											<div class="mango-wiki-page-add-inner">
+												<h4><?php _e( '添加页面', 'mango' ); ?></h4>
+												<div class="mango-wiki-inline-fields">
+													<div class="mango-field-row">
+														<div class="mango-field">
+															<label><?php _e( '页面 ID', 'mango' ); ?></label>
+															<input type="text" class="mango-input mango-page-new-id" placeholder="getting-started">
+															<p class="mango-field-desc"><?php _e( '唯一标识，用于 URL。', 'mango' ); ?></p>
+														</div>
+														<div class="mango-field">
+															<label><?php _e( '标题', 'mango' ); ?></label>
+															<input type="text" class="mango-input mango-page-new-title" placeholder="快速开始">
+														</div>
+													</div>
+													<div class="mango-field-row">
+														<div class="mango-field">
+															<label><?php _e( '父页面', 'mango' ); ?></label>
+															<select class="mango-input mango-page-new-parent">
+																<option value=""><?php _e( '（顶级页面）', 'mango' ); ?></option>
+																<?php foreach ( $pages as $p ): ?>
+																	<option value="<?php echo esc_attr( $p['id'] ); ?>"><?php echo esc_html( $p['title'] ); ?></option>
+																<?php endforeach; ?>
+															</select>
+														</div>
+														<div class="mango-field">
+															<label><?php _e( '排序', 'mango' ); ?></label>
+															<input type="number" class="mango-input mango-page-new-order" value="<?php echo count( $pages ) + 1; ?>" min="1" step="1">
+														</div>
+													</div>
+													<div class="mango-field">
+														<label><?php _e( '内容 (Markdown)', 'mango' ); ?></label>
+														<textarea class="mango-input mango-textarea mango-page-new-content" rows="6" placeholder="# 页面标题&#10;&#10;内容..."></textarea>
+													</div>
+												</div>
+												<div class="mango-wiki-inline-actions">
+													<button type="button" class="button button-primary mango-btn-save-new-page" data-project="<?php echo esc_attr( $slug ); ?>"><?php _e( '添加', 'mango' ); ?></button>
+													<button type="button" class="button mango-btn-cancel-new-page"><?php _e( '取消', 'mango' ); ?></button>
+												</div>
+											</div>
+										</div>
+
+										<!-- 页面列表 -->
+										<?php if ( ! empty( $pages ) ): ?>
+											<div class="mango-wiki-pages-list">
+												<span class="mango-wiki-pages-label"><?php _e( '页面', 'mango' ); ?></span>
+												<?php foreach ( $pages as $idx => $page ): ?>
+													<div class="mango-wiki-page-item" data-id="<?php echo esc_attr( $page['id'] ); ?>" data-project="<?php echo esc_attr( $slug ); ?>">
+														<div class="mango-wiki-page-row">
+															<div class="mango-wiki-page-drag">
+																<span class="dashicons dashicons-menu"></span>
+															</div>
+															<div class="mango-wiki-page-info">
+																<span class="mango-wiki-page-title">
+																	<?php if ( ! empty( $page['parent'] ) ): ?>
+																		<span class="mango-wiki-page-indent dashicons dashicons-arrow-right-alt2"></span>
+																	<?php endif; ?>
+																	<?php echo esc_html( $page['title'] ); ?>
+																</span>
+																<code class="mango-wiki-page-slug"><?php echo esc_html( $page['id'] ); ?></code>
+																<?php if ( ! empty( $page['parent'] ) ): ?>
+																	<span class="mango-wiki-page-parent-badge"><?php echo esc_html( $page['parent'] ); ?></span>
+																<?php endif; ?>
+															</div>
+															<div class="mango-wiki-page-actions">
+																<button type="button" class="button mango-wiki-btn-edit-page" title="<?php _e( '编辑', 'mango' ); ?>">
+																	<span class="dashicons dashicons-edit"></span>
+																</button>
+																<button type="button" class="button mango-wiki-btn-delete-page" data-id="<?php echo esc_attr( $page['id'] ); ?>" data-project="<?php echo esc_attr( $slug ); ?>" title="<?php _e( '删除', 'mango' ); ?>">
+																	<span class="dashicons dashicons-trash"></span>
+																</button>
+															</div>
+														</div>
+														<!-- 页面内联编辑 -->
+														<div class="mango-wiki-page-edit-form" style="display:none;">
+															<div class="mango-wiki-inline-fields">
+																<div class="mango-field-row">
+																	<div class="mango-field">
+																		<label><?php _e( '页面 ID', 'mango' ); ?></label>
+																		<input type="text" class="mango-input mango-page-edit-id" value="<?php echo esc_attr( $page['id'] ); ?>">
+																	</div>
+																	<div class="mango-field">
+																		<label><?php _e( '标题', 'mango' ); ?></label>
+																		<input type="text" class="mango-input mango-page-edit-title" value="<?php echo esc_attr( $page['title'] ); ?>">
+																	</div>
+																</div>
+																<div class="mango-field-row">
+																	<div class="mango-field">
+																		<label><?php _e( '父页面', 'mango' ); ?></label>
+																		<select class="mango-input mango-page-edit-parent">
+																			<option value=""><?php _e( '（顶级页面）', 'mango' ); ?></option>
+																			<?php foreach ( $pages as $p2 ):
+																				$sel = $page['parent'] === $p2['id'] ? 'selected' : '';
+																			?>
+																				<option value="<?php echo esc_attr( $p2['id'] ); ?>" <?php echo $sel; ?>><?php echo esc_html( $p2['title'] ); ?></option>
+																			<?php endforeach; ?>
+																		</select>
+																	</div>
+																	<div class="mango-field">
+																		<label><?php _e( '排序', 'mango' ); ?></label>
+																		<input type="number" class="mango-input mango-page-edit-order" value="<?php echo esc_attr( $page['order'] ?? $idx + 1 ); ?>" min="1" step="1">
+																	</div>
+																</div>
+																<div class="mango-field">
+																	<label><?php _e( '内容 (Markdown)', 'mango' ); ?></label>
+																	<textarea class="mango-input mango-textarea mango-page-edit-content" rows="6"><?php echo esc_textarea( $page['content'] ?? '' ); ?></textarea>
+																</div>
+															</div>
+															<div class="mango-wiki-inline-actions">
+																<button type="button" class="button button-primary mango-btn-save-page-edit" data-project="<?php echo esc_attr( $slug ); ?>"><?php _e( '保存修改', 'mango' ); ?></button>
+																<button type="button" class="button mango-btn-cancel-page-edit"><?php _e( '取消', 'mango' ); ?></button>
+															</div>
+														</div>
+													</div>
+												<?php endforeach; ?>
+											</div>
+										<?php endif; ?>
+									</div>
+								<?php endforeach; ?>
+							<?php endif; ?>
+						</div>
+					</div>
+
+					<script>
+					jQuery(function($) {
+						var wikiData = typeof mangoWikiData !== 'undefined' ? mangoWikiData : {};
+						var $newProjectForm = $('#mango-wiki-project-form-new');
+
+						// ---- 新建项目 ----
+						$('.mango-btn-add-project').on('click', function() {
+							$newProjectForm.slideToggle(180);
+							$('.mango-wiki-project-edit-form:visible').slideUp(180);
+							$('.mango-wiki-page-add-form:visible').slideUp(180);
+							$('.mango-wiki-page-edit-form:visible').slideUp(180);
+						});
+						$('.mango-btn-cancel-new-project').on('click', function() {
+							$newProjectForm.slideUp(180);
+							$newProjectForm.find('input').val('');
+						});
+
+						// 保存新建项目
+						$('.mango-btn-save-new-project').on('click', function() {
+							var slug = $('#mango_new_wiki_slug').val().trim();
+							var name = $('#mango_new_wiki_name').val().trim();
+							if (!slug) { alert('请输入项目 ID'); return; }
+							if (!/^[a-z0-9-]+$/.test(slug)) { alert('项目 ID 只能包含小写字母、数字、连字符'); return; }
+							if (!name) { alert('请输入短名称'); return; }
+							if (wikiData[slug] && !confirm('项目 "' + slug + '" 已存在，是否覆盖？')) return;
+
+							wikiData[slug] = {
+								name: name,
+								title: $('#mango_new_wiki_title').val().trim() || name,
+								subtitle: $('#mango_new_wiki_subtitle').val().trim(),
+								icon: $('#mango_new_wiki_icon').val().trim(),
+								pages: [],
+							};
+
+							var btn = $(this).prop('disabled', true).text('保存中...');
+							$.ajax({
+								url: '<?php echo rest_url( 'mango/v1/wiki/save' ); ?>',
+								method: 'POST',
+								data: JSON.stringify({ slug: slug, project: wikiData[slug] }),
+								contentType: 'application/json',
+								beforeSend: function(xhr) {
+									xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce( 'wp_rest' ); ?>');
+								},
+								success: function() { location.reload(); },
+								error: function() { alert('保存失败，请重试'); btn.prop('disabled', false).text('保存'); }
+							});
+						});
+
+						// ---- 编辑项目 ----
+						$(document).on('click', '.mango-wiki-btn-edit-project', function() {
+							var $card = $(this).closest('.mango-wiki-project-card');
+							var $editForm = $card.find('.mango-wiki-project-edit-form');
+							var isVisible = $editForm.is(':visible');
+							$('.mango-wiki-project-edit-form:visible').slideUp(180);
+							$('.mango-wiki-page-add-form:visible').slideUp(180);
+							$('.mango-wiki-page-edit-form:visible').slideUp(180);
+							if (!isVisible) { $editForm.slideDown(180); }
+						});
+
+						$(document).on('click', '.mango-btn-cancel-project-edit', function() {
+							$(this).closest('.mango-wiki-project-edit-form').slideUp(180);
+						});
+
+						$(document).on('click', '.mango-btn-save-project-edit', function() {
+							var $btn = $(this);
+							var slug = $btn.data('slug');
+							var $form = $btn.closest('.mango-wiki-project-edit-form');
+							if (!wikiData[slug]) { alert('项目不存在'); return; }
+
+							wikiData[slug].name = $form.find('.mango-project-inline-name').val().trim();
+							wikiData[slug].title = $form.find('.mango-project-inline-title').val().trim() || wikiData[slug].name;
+							wikiData[slug].subtitle = $form.find('.mango-project-inline-subtitle').val().trim();
+							wikiData[slug].icon = $form.find('.mango-project-inline-icon').val().trim();
+
+							$btn.prop('disabled', true).text('保存中...');
+							$.ajax({
+								url: '<?php echo rest_url( 'mango/v1/wiki/save' ); ?>',
+								method: 'POST',
+								data: JSON.stringify({ slug: slug, project: wikiData[slug] }),
+								contentType: 'application/json',
+								beforeSend: function(xhr) {
+									xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce( 'wp_rest' ); ?>');
+								},
+								success: function() { location.reload(); },
+								error: function() { alert('保存失败'); $btn.prop('disabled', false).text('保存修改'); }
+							});
+						});
+
+						// ---- 删除项目 ----
+						$(document).on('click', '.mango-wiki-btn-delete-project', function() {
+							var slug = $(this).data('slug');
+							if (!confirm('确定要删除 Wiki 项目 "' + slug + '" 吗？此操作不可撤销。')) return;
+							delete wikiData[slug];
+							var $btn = $(this).prop('disabled', true);
+							$.ajax({
+								url: '<?php echo rest_url( 'mango/v1/wiki/save' ); ?>',
+								method: 'POST',
+								data: JSON.stringify(wikiData),
+								contentType: 'application/json',
+								beforeSend: function(xhr) {
+									xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce( 'wp_rest' ); ?>');
+								},
+								success: function() { location.reload(); },
+								error: function() { alert('删除失败'); $btn.prop('disabled', false); }
+							});
+						});
+
+						// ---- 添加页面 ----
+						$(document).on('click', '.mango-wiki-btn-add-page', function() {
+							var $card = $(this).closest('.mango-wiki-project-card');
+							var $addForm = $card.find('.mango-wiki-page-add-form');
+							var isVisible = $addForm.is(':visible');
+							$('.mango-wiki-page-add-form:visible').slideUp(180);
+							$('.mango-wiki-page-edit-form:visible').slideUp(180);
+							if (!isVisible) { $addForm.slideDown(180); }
+						});
+
+						$(document).on('click', '.mango-btn-cancel-new-page', function() {
+							$(this).closest('.mango-wiki-page-add-form').slideUp(180);
+						});
+
+						$(document).on('click', '.mango-btn-save-new-page', function() {
+							var $btn = $(this);
+							var projectSlug = $btn.data('project');
+							var $form = $btn.closest('.mango-wiki-page-add-form');
+							var pid = $form.find('.mango-page-new-id').val().trim();
+							var title = $form.find('.mango-page-new-title').val().trim();
+							if (!pid) { alert('请输入页面 ID'); return; }
+							if (!/^[a-z0-9-]+$/.test(pid)) { alert('页面 ID 只能包含小写字母、数字、连字符'); return; }
+							if (!title) { alert('请输入标题'); return; }
+							if (!wikiData[projectSlug]) { alert('项目不存在'); return; }
+
+							// 检查是否已存在
+							var exists = false;
+							$.each(wikiData[projectSlug].pages, function(i, p) {
+								if (p.id === pid) { exists = true; return false; }
+							});
+							if (exists) { alert('页面 ID "' + pid + '" 已存在'); return; }
+
+							wikiData[projectSlug].pages.push({
+								id: pid,
+								title: title,
+								content: $form.find('.mango-page-new-content').val(),
+								parent: $form.find('.mango-page-new-parent').val(),
+								order: parseInt($form.find('.mango-page-new-order').val()) || 99,
+							});
+
+							$btn.prop('disabled', true).text('保存中...');
+							$.ajax({
+								url: '<?php echo rest_url( 'mango/v1/wiki/save' ); ?>',
+								method: 'POST',
+								data: JSON.stringify({ slug: projectSlug, project: wikiData[projectSlug] }),
+								contentType: 'application/json',
+								beforeSend: function(xhr) {
+									xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce( 'wp_rest' ); ?>');
+								},
+								success: function() { location.reload(); },
+								error: function() { alert('保存失败'); $btn.prop('disabled', false).text('添加'); }
+							});
+						});
+
+						// ---- 编辑页面 ----
+						$(document).on('click', '.mango-wiki-btn-edit-page', function() {
+							var $pageItem = $(this).closest('.mango-wiki-page-item');
+							var $editForm = $pageItem.find('.mango-wiki-page-edit-form');
+							var isVisible = $editForm.is(':visible');
+							$('.mango-wiki-page-edit-form:visible').slideUp(180);
+							$('.mango-wiki-page-add-form:visible').slideUp(180);
+							if (!isVisible) { $editForm.slideDown(180); }
+						});
+
+						$(document).on('click', '.mango-btn-cancel-page-edit', function() {
+							$(this).closest('.mango-wiki-page-edit-form').slideUp(180);
+						});
+
+						$(document).on('click', '.mango-btn-save-page-edit', function() {
+							var $btn = $(this);
+							var projectSlug = $btn.data('project');
+							var $pageItem = $btn.closest('.mango-wiki-page-item');
+							var oldId = $pageItem.data('id');
+							var $editForm = $pageItem.find('.mango-wiki-page-edit-form');
+							var newId = $editForm.find('.mango-page-edit-id').val().trim();
+							var title = $editForm.find('.mango-page-edit-title').val().trim();
+							if (!newId) { alert('请输入页面 ID'); return; }
+							if (!title) { alert('请输入标题'); return; }
+							if (!wikiData[projectSlug]) { alert('项目不存在'); return; }
+
+							// 更新页面数据
+							var pages = wikiData[projectSlug].pages;
+							for (var i = 0; i < pages.length; i++) {
+								if (pages[i].id === oldId) {
+									pages[i].id = newId;
+									pages[i].title = title;
+									pages[i].content = $editForm.find('.mango-page-edit-content').val();
+									pages[i].parent = $editForm.find('.mango-page-edit-parent').val();
+									pages[i].order = parseInt($editForm.find('.mango-page-edit-order').val()) || 99;
+									break;
+								}
+								// 更新子页面的 parent 引用
+								if (pages[i].parent === oldId && oldId !== newId) {
+									pages[i].parent = newId;
+								}
+							}
+
+							$btn.prop('disabled', true).text('保存中...');
+							$.ajax({
+								url: '<?php echo rest_url( 'mango/v1/wiki/save' ); ?>',
+								method: 'POST',
+								data: JSON.stringify({ slug: projectSlug, project: wikiData[projectSlug] }),
+								contentType: 'application/json',
+								beforeSend: function(xhr) {
+									xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce( 'wp_rest' ); ?>');
+								},
+								success: function() { location.reload(); },
+								error: function() { alert('保存失败'); $btn.prop('disabled', false).text('保存修改'); }
+							});
+						});
+
+						// ---- 删除页面 ----
+						$(document).on('click', '.mango-wiki-btn-delete-page', function() {
+							var $btn = $(this);
+							var projectSlug = $btn.data('project');
+							var pageId = $btn.data('id');
+							if (!confirm('确定要删除页面 "' + pageId + '" 吗？')) return;
+							if (!wikiData[projectSlug]) return;
+
+							wikiData[projectSlug].pages = $.grep(wikiData[projectSlug].pages, function(p) {
+								return p.id !== pageId;
+							});
+
+							$btn.prop('disabled', true);
+							$.ajax({
+								url: '<?php echo rest_url( 'mango/v1/wiki/save' ); ?>',
+								method: 'POST',
+								data: JSON.stringify({ slug: projectSlug, project: wikiData[projectSlug] }),
+								contentType: 'application/json',
+								beforeSend: function(xhr) {
+									xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce( 'wp_rest' ); ?>');
+								},
+								success: function() { location.reload(); },
+								error: function() { alert('删除失败'); $btn.prop('disabled', false); }
+							});
+						});
+
+					});
+					</script>
+
+					<style>
+					#mango-wiki-admin { max-width: 820px; }
+					.mango-wiki-toolbar { margin-bottom: 16px; }
+					.mango-btn-add-project {
+						display: inline-flex !important; align-items: center; gap: 4px;
+						background: linear-gradient(135deg, #059669, #10b981) !important;
+						color: #fff !important; border: none !important; border-radius: 8px !important;
+						padding: 6px 18px !important; font-size: 13px !important; font-weight: 600 !important;
+						box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2); cursor: pointer;
+					}
+					.mango-btn-add-project:hover {
+						background: linear-gradient(135deg, #047857, #059669) !important;
+						box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3) !important; transform: translateY(-1px);
+					}
+					.mango-btn-add-project .dashicons { font-size: 16px; width: 16px; height: 16px; color: #fff; }
+					.mango-wiki-project-form-new { margin-bottom: 16px; }
+					.mango-wiki-form-inner { background: #fafbfc; border: 1.5px dashed #6ee7b7; border-radius: 10px; padding: 20px; }
+					.mango-wiki-form-inner h4 { margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #334155; }
+					.mango-wiki-form-actions { display: flex; gap: 8px; margin-top: 16px; }
+					.mango-wiki-form-actions .button-primary {
+						background: linear-gradient(135deg, #059669, #10b981) !important; border: none !important;
+						border-radius: 6px !important; padding: 6px 20px !important; font-size: 13px !important;
+						font-weight: 600 !important; color: #fff !important;
+						box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2) !important;
+					}
+					.mango-wiki-project-card {
+						background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+						margin-bottom: 14px; overflow: hidden;
+						transition: box-shadow 0.2s ease;
+					}
+					.mango-wiki-project-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+					.mango-wiki-project-header {
+						display: flex; align-items: flex-start; justify-content: space-between;
+						padding: 16px 18px; gap: 12px;
+					}
+					.mango-wiki-project-info { display: flex; gap: 14px; flex: 1; min-width: 0; }
+					.mango-wiki-project-icon {
+						width: 44px; height: 44px; flex-shrink: 0;
+						background: #ecfdf5; border-radius: 10px;
+						display: flex; align-items: center; justify-content: center;
+					}
+					.mango-wiki-project-icon .dashicons { color: #059669; font-size: 22px; width: 22px; height: 22px; }
+					.mango-wiki-project-icon img { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; }
+					.mango-wiki-project-meta { flex: 1; min-width: 0; }
+					.mango-wiki-project-title { display: block; font-size: 14px; color: #1e293b; margin-bottom: 2px; }
+					.mango-wiki-project-subtitle { display: block; font-size: 12px; color: #64748b; margin-bottom: 4px; }
+					.mango-wiki-project-id { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; }
+					.mango-wiki-project-id code { font-size: 11px; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; color: #475569; }
+					.mango-wiki-page-count { color: #94a3b8; }
+					.mango-wiki-project-actions { display: flex; gap: 6px; flex-shrink: 0; }
+					.mango-wiki-project-actions .button {
+						padding: 4px 8px !important; min-height: 0 !important; line-height: 1 !important;
+						border: 1px solid #e2e8f0 !important; border-radius: 6px !important;
+						background: #fff !important; color: #64748b !important;
+					}
+					.mango-wiki-project-actions .button:hover { border-color: #6ee7b7 !important; color: #059669 !important; background: #ecfdf5 !important; }
+					.mango-wiki-project-actions .button .dashicons { font-size: 14px; width: 14px; height: 14px; }
+					.mango-wiki-project-edit-form { border-top: 1px solid #eef2f6; padding: 14px 18px; background: #fafbfc; }
+					.mango-wiki-page-add-form { border-top: 1px solid #eef2f6; padding: 14px 18px; background: #fafbfc; }
+					.mango-wiki-page-add-inner h4 { margin: 0 0 14px; font-size: 13px; font-weight: 600; color: #334155; }
+					.mango-wiki-inline-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+					.mango-wiki-inline-fields > .mango-field:last-child:nth-child(odd),
+					.mango-wiki-inline-fields > .mango-field:only-child { grid-column: 1 / -1; }
+					.mango-wiki-inline-fields .mango-field { display: flex; flex-direction: column; gap: 3px; }
+					.mango-wiki-inline-fields .mango-field label { font-size: 11.5px; font-weight: 600; color: #475569; }
+					.mango-wiki-inline-fields .mango-input { border: 1.5px solid #e2e8f0 !important; border-radius: 6px !important; padding: 5px 8px !important; font-size: 12.5px !important; box-shadow: none !important; width: 100% !important; }
+					.mango-wiki-inline-fields .mango-input:focus { border-color: #059669 !important; box-shadow: 0 0 0 3px rgba(5,150,105,0.1) !important; outline: none !important; }
+					.mango-wiki-inline-actions { display: flex; gap: 8px; }
+					.mango-wiki-inline-actions .button-primary {
+						background: linear-gradient(135deg, #059669, #10b981) !important; border: none !important;
+						border-radius: 6px !important; padding: 4px 16px !important; font-size: 12.5px !important;
+						font-weight: 600 !important; color: #fff !important; box-shadow: 0 2px 6px rgba(5,150,105,0.2) !important;
+					}
+					.mango-wiki-inline-actions .button-primary:hover {
+						box-shadow: 0 4px 12px rgba(5,150,105,0.3) !important; transform: translateY(-1px);
+					}
+					.mango-wiki-pages-list { padding: 0 18px 14px; margin-top: 2px; }
+					.mango-wiki-pages-label { display: block; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+					.mango-wiki-page-item {
+						background: #f8fafc; border: 1px solid #eef2f6; border-radius: 6px;
+						margin-bottom: 6px; overflow: hidden;
+					}
+					.mango-wiki-page-item:hover { border-color: #d1fae5; }
+					.mango-wiki-page-row {
+						display: flex; align-items: center; gap: 8px;
+						padding: 8px 10px;
+					}
+					.mango-wiki-page-drag { color: #cbd5e1; cursor: grab; flex-shrink: 0; }
+					.mango-wiki-page-drag .dashicons { font-size: 14px; width: 14px; height: 14px; }
+					.mango-wiki-page-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+					.mango-wiki-page-title { font-size: 13px; color: #1e293b; font-weight: 500; display: flex; align-items: center; gap: 2px; }
+					.mango-wiki-page-indent { color: #94a3b8; font-size: 12px; width: 12px; height: 12px; }
+					.mango-wiki-page-slug { font-size: 11px; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; color: #64748b; }
+					.mango-wiki-page-parent-badge { font-size: 10px; background: #d1fae5; color: #059669; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+					.mango-wiki-page-actions { display: flex; gap: 4px; flex-shrink: 0; }
+					.mango-wiki-page-actions .button { padding: 2px 6px !important; min-height: 0 !important; line-height: 1 !important; border: 1px solid #e2e8f0 !important; border-radius: 4px !important; background: #fff !important; color: #64748b !important; }
+					.mango-wiki-page-actions .button:hover { border-color: #6ee7b7 !important; color: #059669 !important; background: #ecfdf5 !important; }
+					.mango-wiki-page-actions .button .dashicons { font-size: 12px; width: 12px; height: 12px; }
+					.mango-wiki-page-edit-form { border-top: 1px solid #eef2f6; padding: 12px 14px; background: #fafbfc; }
+					.mango-wiki-empty { text-align: center; padding: 48px 20px; background: #fafbfc; border: 1.5px dashed #e2e8f0; border-radius: 10px; }
+					.mango-wiki-empty .dashicons { font-size: 40px; width: 40px; height: 40px; color: #6ee7b7; margin-bottom: 8px; }
+					.mango-wiki-empty p { margin: 0; font-size: 14px; color: #94a3b8; }
+					</style>
 
 					<p class="submit">
 						<button type="submit" name="mango_save" class="button button-primary">
