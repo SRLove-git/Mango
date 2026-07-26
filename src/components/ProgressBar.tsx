@@ -5,7 +5,7 @@ export default function ProgressBar() {
   const location = useLocation()
   const [width, setWidth] = useState(0)
   const [visible, setVisible] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const prevKeyRef = useRef(location.key)
 
   useEffect(() => {

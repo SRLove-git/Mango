@@ -67,7 +67,7 @@ export default function Layout() {
         {/* Content Wrapper */}
         <div className="content-wrapper">
           {/* CategoryBar — 类似 Firefly 的分类 pill 导航 */}
-          {categories.length > 0 && <CategoryBar categories={categories} totalPosts={0} />}
+          {categories.length > 0 && <CategoryBar categories={categories} />}
 
           <main className="main-content">
             <Outlet />

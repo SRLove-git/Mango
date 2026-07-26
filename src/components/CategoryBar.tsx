@@ -3,10 +3,9 @@ import type { WPCategory } from '../api/wordpress'
 
 interface Props {
   categories: WPCategory[]
-  totalPosts: number
 }
 
-export default function CategoryBar({ categories, totalPosts }: Props) {
+export default function CategoryBar({ categories }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -16,7 +15,7 @@ export default function CategoryBar({ categories, totalPosts }: Props) {
     ? decodeURIComponent(location.pathname.replace('/category/', '').replace(/\/$/, ''))
     : null
 
-  const pills = [
+  const pills: Array<{ label: string; href: string; active: boolean; icon: string | null; count?: number }> = [
     {
       label: '全部',
       href: '/',
