@@ -25,7 +25,7 @@ export default function PostCard({ post }: PostCardProps) {
   return (
     <article className="post-card glass">
       {showThumb && (
-        <Link to={`/post/${post.slug}`} className="post-thumb-wrap group">
+        <Link to={`/archives/${post.id}.html`} className="post-thumb-wrap group">
           <div className="post-thumb-overlay" />
           <img
             src={imageUrl!}
@@ -49,7 +49,7 @@ export default function PostCard({ post }: PostCardProps) {
       )}
       <div className="post-info">
         <h2>
-          <Link to={`/post/${post.slug}`} className="post-title-link">
+          <Link to={`/archives/${post.id}.html`} className="post-title-link">
             {post.title.rendered}
           </Link>
         </h2>
@@ -67,7 +67,7 @@ export default function PostCard({ post }: PostCardProps) {
           className="post-excerpt"
           dangerouslySetInnerHTML={{ __html: post.excerpt.rendered }}
         />
-        <Link to={`/post/${post.slug}`} className="read-more">
+        <Link to={`/archives/${post.id}.html`} className="read-more">
           阅读更多
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="read-more-arrow">
             <polyline points="9 18 15 12 9 6" />

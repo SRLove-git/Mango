@@ -16,6 +16,8 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/archives" element={<Archive />} />
+        <Route path="/archives/:postId" element={<PostDetail />} />
+        <Route path="/archives/:postId.html" element={<PostDetail />} />
         <Route path="/page/:slug" element={<Page />} />
         <Route path="/post/:slug" element={<PostDetail />} />
         <Route path="/category/:slug" element={<Category />} />

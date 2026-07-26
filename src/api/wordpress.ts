@@ -88,6 +88,17 @@ export async function getPost(slug: string): Promise<WPPost | null> {
   return isPostArray(data) && data.length > 0 ? data[0] : null
 }
 
+export async function getPostById(id: number): Promise<WPPost | null> {
+  const url = `${API_URL}/posts/${id}?_embed=1`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
 export async function getPage(slug: string): Promise<WPPost | null> {
   const { data } = await fetchAPI<WPPost[]>('/pages', {
     slug,

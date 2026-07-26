@@ -112,8 +112,20 @@ export default function Layout() {
       {/* Footer */}
       <footer className="footer glass">
         <span className="logo-text">Mango</span>
-        <br />
-        © {new Date().getFullYear()} Mango Theme. Powered by WordPress.
+        <p className="footer-info">
+          {(window as any).MANGO_DATA?.footerText
+            ? (window as any).MANGO_DATA.footerText
+            : `© ${new Date().getFullYear()} Mango Theme. Powered by WordPress.`}
+        </p>
+        <p className="footer-extra">
+          {(window as any).MANGO_DATA?.siteStartDate &&
+            `网站已运行 ${Math.floor((Date.now() - new Date((window as any).MANGO_DATA.siteStartDate).getTime()) / 86400000)} 天`
+          }
+          {(window as any).MANGO_DATA?.siteStartDate && (window as any).MANGO_DATA?.icpNumber && ' | '}
+          {(window as any).MANGO_DATA?.icpNumber &&
+            `${(window as any).MANGO_DATA.icpNumber}`
+          }
+        </p>
       </footer>
     </div>
   )
