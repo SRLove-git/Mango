@@ -40,12 +40,13 @@
 - [x] **友情链接** — 友链页面，支持分类展示与链接分组
 - [x] **页面支持** — 支持 WordPress 原生页面及自定义页面模板
 - [x] **搜索功能** — 实时搜索文章
+- [x] **Wiki 知识库** — 多项目 Wiki 页面，支持树形目录、Markdown 渲染、侧边栏导航
 
 ### 布局特性
 
-- [x] **侧边栏** — 支持显示分类、标签、近期文章等
+- [x] **侧边栏** — 支持显示分类、标签、近期文章、Wiki 页面树等
 - [x] **分类导航栏** — 顶部分类快捷导航，支持通过 WordPress 菜单管理（外观 → 菜单 → Category Bar）
-- [x] **阅读进度条** — 文章阅读进度指示
+- [x] **文章目录 (TOC)** — 自动解析页面标题层级生成目录
 - [x] **亮暗色模式** — 跟随系统或手动切换
 
 ## 🚀 快速开始
@@ -105,11 +106,18 @@ mango/
 │   │   └── wordpress.ts     # WordPress REST API 封装
 │   ├── components/
 │   │   ├── CategoryBar.tsx   # 分类导航栏
-│   │   ├── Layout.tsx        # 布局组件
+│   │   ├── ClickEffect.tsx   # 点击特效
+│   │   ├── Layout.tsx        # 布局组件（含文章 TOC 上下文）
+│   │   ├── MarkdownRenderer.tsx # Markdown 渲染
 │   │   ├── Pagination.tsx    # 分页组件
+│   │   ├── PageTransition.tsx # 页面过渡动画
 │   │   ├── PostCard.tsx      # 文章卡片
-│   │   ├── ProgressBar.tsx   # 阅读进度条
-│   │   └── Sidebar.tsx       # 侧边栏
+│   │   ├── SakuraEffect.tsx  # 樱花特效
+│   │   ├── Sidebar.tsx       # 侧边栏（含 wiki_tree 模块）
+│   │   └── ...
+│   ├── context/
+│   │   ├── ArticleTocContext.tsx  # 目录扫描上下文
+│   │   └── SiteDataContext.tsx    # 站点数据上下文
 │   ├── pages/
 │   │   ├── Archive.tsx       # 归档页
 │   │   ├── Category.tsx      # 分类页
@@ -117,11 +125,16 @@ mango/
 │   │   ├── Links.tsx         # 友链页
 │   │   ├── Page.tsx          # 通用页面
 │   │   ├── PostDetail.tsx    # 文章详情页
-│   │   └── Search.tsx        # 搜索页
+│   │   ├── Search.tsx        # 搜索页
+│   │   ├── WikiDetail.tsx    # Wiki 页面详情
+│   │   └── WikiIndex.tsx     # Wiki 项目列表
 │   ├── App.tsx               # 路由配置
 │   ├── main.tsx              # 入口文件
 │   └── index.css             # 全局样式
 ├── theme/                    # WordPress 主题文件
+│   ├── inc/
+│   │   ├── wiki.php          # Wiki REST API 端点
+│   │   └── ...
 │   ├── functions.php         # 主题函数
 │   ├── index.php             # 主题入口
 │   └── style.css             # 主题信息
