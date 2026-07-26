@@ -60,6 +60,9 @@ function mango_enqueue_scripts(): void {
 	// 读取布局设置
 	$mango_layout = get_theme_mod( 'mango_layout_settings', [] );
 
+	// 读取 Live2D 看板娘设置
+	$mango_live2d = get_theme_mod( 'mango_live2d_settings', [] );
+
 	// 读取侧边栏配置
 	$mango_sidebar_widgets = get_option( 'mango_sidebar_widgets', [] );
 	if ( empty( $mango_sidebar_widgets ) ) {
@@ -104,6 +107,12 @@ function mango_enqueue_scripts(): void {
 		],
 		'sidebar' => [
 			'widgets' => $mango_sidebar_widgets,
+		],
+		'live2d' => [
+			'enabled'       => $mango_live2d['enabled'] ?? '1',
+			'position'      => $mango_live2d['position'] ?? 'right',
+			'mobileHidden'  => $mango_live2d['mobile_hidden'] ?? '1',
+			'cdnUrl'        => $mango_live2d['cdn_url'] ?? '',
 		],
 	] );
 }

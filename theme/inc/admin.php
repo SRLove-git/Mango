@@ -174,6 +174,17 @@ function mango_render_admin_page(): void {
 			update_option( 'mango_sidebar_widgets', $widgets );
 		}
 
+		// Live2D 看板娘设置（主题设置 tab）
+		if ( isset( $_POST['mango_live2d_enabled'] ) ) {
+			$live2d = [
+				'enabled'        => isset( $_POST['mango_live2d_enabled'] ) ? '1' : '0',
+				'position'       => in_array( $_POST['mango_live2d_position'] ?? '', [ 'left', 'right' ] ) ? $_POST['mango_live2d_position'] : 'right',
+				'mobile_hidden'  => isset( $_POST['mango_live2d_mobile_hidden'] ) ? '1' : '0',
+				'cdn_url'        => esc_url_raw( $_POST['mango_live2d_cdn_url'] ?? '' ),
+			];
+			set_theme_mod( 'mango_live2d_settings', $live2d );
+		}
+
 		// 社交链接（高级设置 tab）
 		if ( isset( $_POST['mango_social_links'] ) ) {
 			$social_links = array_map( 'esc_url_raw', $_POST['mango_social_links'] );
@@ -232,6 +243,13 @@ function mango_render_admin_page(): void {
 	$show_author    = $post_display['show_author'] ?? '1';
 	$show_date      = $post_display['show_date'] ?? '1';
 	$show_categories= $post_display['show_categories'] ?? '1';
+
+	// 读取 Live2D 看板娘设置
+	$live2d_settings     = get_theme_mod( 'mango_live2d_settings', [] );
+	$live2d_enabled      = $live2d_settings['enabled'] ?? '1';
+	$live2d_position     = $live2d_settings['position'] ?? 'right';
+	$live2d_mobile_hidden = $live2d_settings['mobile_hidden'] ?? '1';
+	$live2d_cdn_url      = $live2d_settings['cdn_url'] ?? '';
 
 	// 读取侧边栏配置
 	$sidebar_widgets = get_option( 'mango_sidebar_widgets', [] );
@@ -1218,6 +1236,43 @@ function mango_render_admin_page(): void {
 									<label><input type="checkbox" name="mango_show_date" value="1" <?php checked( $show_date, '1' ); ?>> <?php _e( '显示日期', 'mango' ); ?></label><br>
 									<label><input type="checkbox" name="mango_show_categories" value="1" <?php checked( $show_categories, '1' ); ?>> <?php _e( '显示分类', 'mango' ); ?></label>
 									<p class="description"><?php _e( '控制文章列表中是否显示作者、日期和分类信息。', 'mango' ); ?></p>
+								</td>
+							</tr>
+						</table>
+					</div>
+
+					<!-- Live2D 看板娘设置 -->
+					<div class="mango-scheme-section">
+						<h3><?php _e( '看板娘设置', 'mango' ); ?></h3>
+						<p class="description"><?php _e( '配置页面右下角的 Live2D 看板娘。', 'mango' ); ?></p>
+						<table class="form-table">
+							<tr>
+								<th scope="row"><?php _e( '启用看板娘', 'mango' ); ?></th>
+								<td>
+									<label><input type="checkbox" name="mango_live2d_enabled" value="1" <?php checked( $live2d_enabled, '1' ); ?>> <?php _e( '显示 Live2D 看板娘', 'mango' ); ?></label>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php _e( '显示位置', 'mango' ); ?></th>
+								<td>
+									<select name="mango_live2d_position" style="min-width:160px;">
+										<option value="right" <?php selected( $live2d_position, 'right' ); ?>><?php _e( '右下角', 'mango' ); ?></option>
+										<option value="left" <?php selected( $live2d_position, 'left' ); ?>><?php _e( '左下角', 'mango' ); ?></option>
+									</select>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php _e( '移动端', 'mango' ); ?></th>
+								<td>
+									<label><input type="checkbox" name="mango_live2d_mobile_hidden" value="1" <?php checked( $live2d_mobile_hidden, '1' ); ?>> <?php _e( '移动端隐藏', 'mango' ); ?></label>
+									<p class="description"><?php _e( '在手机等小屏幕设备上自动隐藏看板娘。', 'mango' ); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php _e( '自定义 CDN', 'mango' ); ?></th>
+								<td>
+									<input type="url" name="mango_live2d_cdn_url" value="<?php echo esc_attr( $live2d_cdn_url ); ?>" class="regular-text" placeholder="<?php _e( '默认: https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/autoload.js', 'mango' ); ?>">
+									<p class="description"><?php _e( '留空则使用默认 CDN 地址。当默认 CDN 无法访问时可自定义。', 'mango' ); ?></p>
 								</td>
 							</tr>
 						</table>
