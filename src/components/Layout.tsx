@@ -3,9 +3,10 @@ import PageTransition from './PageTransition'
 import CategoryBar from './CategoryBar'
 import Sidebar from './Sidebar'
 import Live2D from './Live2D'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { WPCategory, WPMenuItem, Topic } from '../api/wordpress'
 import { getCategories, getTags, getUser, getMenu, getCategoryMenu, getTopics } from '../api/wordpress'
+import { getRandomImageUrl } from '../api/image'
 import SiteDataContext from '../context/SiteDataContext'
 import { ArticleTocProvider } from '../context/ArticleTocContext'
 
@@ -21,7 +22,11 @@ export default function Layout() {
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [bannerLoaded, setBannerLoaded] = useState(false)
+  const wallpaperRef = useRef<HTMLDivElement>(null)
   const sidebarPosition = (window as any).MANGO_DATA?.layout?.sidebar_position || 'right'
+  const bannerImage = (window as any).MANGO_DATA?.bannerImage || getRandomImageUrl('banner')
+  const isHomePage = location.pathname === '/'
 
   // 滚动检测 — 为 navbar 添加阴影
   useEffect(() => {
@@ -85,12 +90,52 @@ export default function Layout() {
   return (
     <SiteDataContext.Provider value={{ user, categories, tags, topics }}>
     <ArticleTocProvider>
-    <div className="site-wrapper">
+    <div className={`site-wrapper${isHomePage ? ' home' : ''}`}>
       {/* Top Gradient Highlight — 参照 Firefly 的顶部渐变高光效果 */}
       <div className="top-gradient-highlight" aria-hidden="true" />
 
+      {/* ===== Banner / Wallpaper — Firefly 风格顶部全屏图片 ===== */}
+      <div
+        id="wallpaper-wrapper"
+        ref={wallpaperRef}
+        className="wallpaper-wrapper"
+        data-loaded={bannerLoaded}
+      >
+        {/* 背景图片 */}
+        <img
+          src={bannerImage}
+          alt=""
+          className="wallpaper-bg"
+          onLoad={() => setBannerLoaded(true)}
+        />
+        {/* 暗色渐变叠加层 */}
+        <div className="wallpaper-overlay" aria-hidden="true" />
+        {/* 首页文字叠加层 */}
+        {isHomePage && (
+          <div className="banner-home-text-overlay">
+            <div>
+              <h1 className="banner-title">
+                {(window as any).MANGO_DATA?.siteName || 'Mango'}
+              </h1>
+              {(window as any).MANGO_DATA?.siteDescription && (
+                <p className="banner-subtitle">
+                  {(window as any).MANGO_DATA.siteDescription}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        {/* 滚动提示 */}
+        <div className="scroll-down-indicator" aria-hidden="true">
+          <span className="scroll-down-arrow" />
+        </div>
+      </div>
+
       {/* Header / Navbar — Firefly 风格重构 */}
-      <div id="navbar" className={scrolled ? 'navbar-scrolled' : ''}>
+      <div
+        id="navbar"
+        className={`${scrolled || !isHomePage ? 'navbar-scrolled' : ''} ${isHomePage ? 'navbar-home' : ''}`}
+      >
         <div className="navbar-inner">
           <div className="navbar-grid">
             {/* Logo */}

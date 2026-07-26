@@ -673,19 +673,298 @@ img {
   );
 }
 
+/* ===== Wallpaper / Banner — Firefly 风格顶部全屏图片 ===== */
+
+.wallpaper-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  max-height: 600px;
+  overflow: hidden;
+  z-index: 0;
+  background: var(--bg-elevated);
+}
+
+/* Banner 模式: 固定高度 + 底部渐变衔接 */
+.wallpaper-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, var(--bg) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.wallpaper-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.8s ease-out, transform 1.2s ease-out;
+  will-change: transform;
+}
+
+.wallpaper-wrapper[data-loaded="true"] .wallpaper-bg {
+  opacity: 1;
+}
+
+/* 图片视差缩放效果 */
+.wallpaper-wrapper:hover .wallpaper-bg {
+  transform: scale(1.03);
+}
+
+/* 暗色渐变叠加层 — 确保文字可读性 */
+.wallpaper-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.25) 0%,
+    rgba(0, 0, 0, 0.35) 40%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ===== Banner 首页文字叠加层 ===== */
+
+.banner-home-text-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  padding: 2rem;
+  text-align: center;
+  color: #fff;
+  pointer-events: none;
+}
+
+.banner-home-text-overlay > div {
+  max-width: 700px;
+}
+
+.banner-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 0.75rem;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  animation: banner-fade-in-up 0.5s ease-out forwards;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.banner-subtitle {
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-weight: 400;
+  line-height: 1.5;
+  margin: 0;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  animation: banner-fade-in-up 0.5s ease-out 0.3s forwards;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@keyframes banner-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== 滚动提示指示器 ===== */
+
+.scroll-down-indicator {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  pointer-events: none;
+  animation: scroll-indicator-bounce 2s ease-in-out infinite;
+}
+
+.scroll-down-arrow {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-right: 2px solid rgba(255, 255, 255, 0.6);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.6);
+  transform: rotate(45deg);
+}
+
+@keyframes scroll-indicator-bounce {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(6px);
+  }
+}
+
+/* ===== 导航栏在 Banner 上的透明模式 ===== */
+
+/* 首页导航栏 — 覆盖在 banner 上方 */
+#navbar.navbar-home {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+
+#navbar.navbar-home > .navbar-inner {
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+/* 首页透明模式下导航栏文字颜色适配 */
+#navbar.navbar-home .navbar-logo {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+#navbar.navbar-home .navbar-link {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+#navbar.navbar-home .navbar-link:hover,
+#navbar.navbar-home .navbar-link.active {
+  color: #fff;
+}
+
+#navbar.navbar-home .navbar-link::before {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#navbar.navbar-home .navbar-search-icon {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+#navbar.navbar-home .navbar-search input {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#navbar.navbar-home .navbar-search input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+#navbar.navbar-home .navbar-mobile-btn {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* 首页导航栏滚动后变坚实 */
+#navbar.navbar-home.navbar-scrolled > .navbar-inner {
+  background: color-mix(in oklch, var(--glass) 55%, transparent);
+  border-color: var(--border);
+  box-shadow: var(--card-shadow);
+}
+
+/* 滚动后恢复原有文字颜色 */
+#navbar.navbar-home.navbar-scrolled .navbar-logo {
+  color: var(--text);
+}
+
+#navbar.navbar-home.navbar-scrolled .navbar-link {
+  color: var(--text-muted);
+}
+
+#navbar.navbar-home.navbar-scrolled .navbar-link:hover,
+#navbar.navbar-home.navbar-scrolled .navbar-link.active {
+  color: var(--accent);
+}
+
+#navbar.navbar-home.navbar-scrolled .navbar-search-icon {
+  color: var(--text-dim);
+}
+
+#navbar.navbar-home.navbar-scrolled .navbar-search input {
+  color: var(--text);
+}
+
+#navbar.navbar-home.navbar-scrolled .navbar-search input::placeholder {
+  color: var(--text-dim);
+}
+
+#navbar.navbar-home.navbar-scrolled .navbar-mobile-btn {
+  color: var(--text);
+}
+
+/* 非首页时导航栏正常显示 */
+#navbar:not(.navbar-home) {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* 非首页时，如果 wallpaper 存在，调整其高度 */
+.site-wrapper:not(.home) .wallpaper-wrapper {
+  height: 48vh;
+  max-height: 320px;
+  min-height: 200px;
+}
+
+/* 非首页时在 wallpaper 上方添加导航栏空间 */
+.site-wrapper:not(.home) .wallpaper-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 76px; /* 导航栏高度 + 间距 */
+  z-index: 5;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* 非首页时滚动后保持导航栏不透明 */
+.site-wrapper:not(.home) #navbar.navbar-scrolled:not(.navbar-home) > .navbar-inner {
+  background: color-mix(in oklch, var(--glass) 55%, transparent);
+  border-color: var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
 .light-theme .glass {
   background: var(--bg-elevated);
 }
 
 /* ===== Sidebar ===== */
 
+/* 外层容器：grid 默认 stretch 撑满行高，作为内部 sticky 的边界 */
 .sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 内部 sticky 容器 — 参照 Firefly 的 position: sticky; top: <gap>
+   - 下滑时与中间内容滚动一致，顶部对齐
+   - 侧边栏顶部到达导航栏下方时粘住
+   - 父容器底部触及时自然释放，与内容区重新对齐 */
+.sidebar-sticky {
   display: flex;
   flex-direction: column;
   gap: 16px;
   position: sticky;
-  top: 100px;
-  align-self: start;
+  top: 76px; /* 导航栏高度(68px) + 间距(8px) */
 }
 
 /* 侧边栏卡片内边距 — 参照 Firefly 的紧凑布局 */
@@ -714,12 +993,6 @@ img {
   .sidebar-right-grid {
     display: flex;
   }
-}
-
-.sidebar-top {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
 }
 
 .sidebar-title {
@@ -2900,6 +3173,74 @@ img {
   .topic-header-section {
     flex-direction: column;
     text-align: center;
+  }
+
+  /* ===== 移动端横幅响应式 ===== */
+  .wallpaper-wrapper {
+    max-height: 50vh;
+  }
+
+  .wallpaper-wrapper::after {
+    height: 50%;
+  }
+
+  .wallpaper-overlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.35) 0%,
+      rgba(0, 0, 0, 0.45) 50%,
+      rgba(0, 0, 0, 0.65) 100%
+    );
+  }
+
+  .banner-title {
+    font-size: clamp(1.5rem, 6vw, 2.2rem);
+  }
+
+  .banner-subtitle {
+    font-size: clamp(0.85rem, 3vw, 1.1rem);
+  }
+
+  .scroll-down-indicator {
+    bottom: 20px;
+  }
+
+  .scroll-down-arrow {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* 非首页移动端缩小 banner */
+  .site-wrapper:not(.home) .wallpaper-wrapper {
+    height: 32vh;
+    max-height: 220px;
+    min-height: 140px;
+  }
+
+  /* 移动端非首页隐藏文字叠加层 */
+  .site-wrapper:not(.home) .banner-home-text-overlay {
+    display: none;
+  }
+}
+
+/* 小屏手机 (320px-480px) 进一步压缩 */
+@media (max-width: 480px) {
+  .wallpaper-wrapper {
+    max-height: 40vh;
+  }
+
+  .site-wrapper:not(.home) .wallpaper-wrapper {
+    height: 25vh;
+    max-height: 160px;
+    min-height: 100px;
+  }
+
+  .banner-title {
+    font-size: clamp(1.2rem, 5vw, 1.6rem);
+  }
+
+  .banner-home-text-overlay {
+    padding: 1rem;
   }
 }
 

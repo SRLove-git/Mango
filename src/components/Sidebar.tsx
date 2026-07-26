@@ -425,7 +425,7 @@ export default function Sidebar({ side, className }: Props) {
 
   return (
     <aside className={`sidebar sidebar-${side} ${className || ''}`}>
-      <div className="sidebar-top">
+      <div className="sidebar-sticky">
         {widgets.map((w, i) => renderWidget(w, i))}
       </div>
     </aside>
