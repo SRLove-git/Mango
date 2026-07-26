@@ -84,7 +84,8 @@ function mango_theme_setup(): void {
     ]);
 
     register_nav_menus([
-        'primary' => __('Primary Menu', 'mango'),
+        'primary'      => __('Primary Menu', 'mango'),
+        'category_bar' => __('Category Bar', 'mango'),
     ]);
 }
 add_action('after_setup_theme', 'mango_theme_setup');
@@ -1202,6 +1203,96 @@ function mango_register_links_routes(): void {
     ]);
 }
 add_action('rest_api_init', 'mango_register_links_routes');
+
+/**
+ * 注册自定义 REST API — 获取导航菜单
+ */
+function mango_register_menu_routes(): void {
+    register_rest_route('mango/v1', '/menu', [
+        'methods'  => 'GET',
+        'callback' => function (): WP_REST_Response {
+            $locations = get_nav_menu_locations();
+            $menu_id   = $locations['primary'] ?? 0;
+
+            if (!$menu_id) {
+                return new WP_REST_Response([], 200);
+            }
+
+            $items = wp_get_nav_menu_items($menu_id);
+            if (!$items || is_wp_error($items)) {
+                return new WP_REST_Response([], 200);
+            }
+
+            $site_url = trailingslashit(site_url());
+            $menu_data = [];
+
+            foreach ($items as $item) {
+                $menu_data[] = [
+                    'id'     => $item->ID,
+                    'title'  => $item->title,
+                    'url'    => $item->url,
+                    'slug'   => basename(untrailingslashit($item->url)),
+                    'parent' => (int) $item->menu_item_parent,
+                    'order'  => (int) $item->menu_order,
+                    'target' => $item->target ?: '',
+                ];
+            }
+
+            return new WP_REST_Response($menu_data, 200);
+        },
+        'permission_callback' => '__return_true',
+    ]);
+}
+add_action('rest_api_init', 'mango_register_menu_routes');
+
+/**
+ * 注册自定义 REST API — 获取分类栏菜单
+ */
+function mango_register_category_menu_routes(): void {
+    register_rest_route('mango/v1', '/category-menu', [
+        'methods'  => 'GET',
+        'callback' => function (): WP_REST_Response {
+            $locations = get_nav_menu_locations();
+            $menu_id   = $locations['category_bar'] ?? 0;
+
+            if (!$menu_id) {
+                return new WP_REST_Response([], 200);
+            }
+
+            $items = wp_get_nav_menu_items($menu_id);
+            if (!$items || is_wp_error($items)) {
+                return new WP_REST_Response([], 200);
+            }
+
+            $site_url = trailingslashit(site_url());
+            $menu_data = [];
+
+            foreach ($items as $item) {
+                // 标准化路径：将 /archives/category/xxx 转为 /category/xxx
+                $url_path = parse_url($item->url, PHP_URL_PATH) ?? '';
+                $normalized = $url_path;
+                if (preg_match('#/archives/category/(.+)$#', $url_path, $m) || preg_match('#/category/(.+)$#', $url_path, $m)) {
+                    $normalized = '/category/' . $m[1];
+                }
+
+                $menu_data[] = [
+                    'id'     => $item->ID,
+                    'title'  => $item->title,
+                    'url'    => $item->url,
+                    'path'   => $normalized,
+                    'slug'   => basename(untrailingslashit($item->url)),
+                    'parent' => (int) $item->menu_item_parent,
+                    'order'  => (int) $item->menu_order,
+                    'target' => $item->target ?: '',
+                ];
+            }
+
+            return new WP_REST_Response($menu_data, 200);
+        },
+        'permission_callback' => '__return_true',
+    ]);
+}
+add_action('rest_api_init', 'mango_register_category_menu_routes');
 
 /**
  * 在友链编辑/添加页面添加提示信息

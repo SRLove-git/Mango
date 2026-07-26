@@ -819,8 +819,9 @@ img {
 /* ===== CategoryBar (Firefly-inspired: pill navigation) ===== */
 
 .category-bar {
-  overflow: hidden;
-  padding: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
 }
 
 .category-bar-inner {

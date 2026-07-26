@@ -199,4 +199,45 @@ export async function getUser(): Promise<{ name: string; description: string; av
   return Array.isArray(data) && data.length > 0 ? data[0] : null
 }
 
+/* =====================================================
+ * 导航菜单
+ * ===================================================== */
+
+export interface WPMenuItem {
+  id: number
+  title: string
+  url: string
+  path?: string
+  slug: string
+  parent: number
+  order: number
+  target: string
+}
+
+export async function getMenu(): Promise<WPMenuItem[]> {
+  const siteUrl = (window as any).MANGO_DATA?.siteUrl || ''
+  const url = `${siteUrl}/wp-json/mango/v1/menu`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
+  }
+}
+
+export async function getCategoryMenu(): Promise<WPMenuItem[]> {
+  const siteUrl = (window as any).MANGO_DATA?.siteUrl || ''
+  const url = `${siteUrl}/wp-json/mango/v1/category-menu`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
+  }
+}
+
 export type { WPPost, WPCategory }

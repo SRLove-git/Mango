@@ -3,20 +3,24 @@ import ProgressBar from './ProgressBar'
 import CategoryBar from './CategoryBar'
 import Sidebar from './Sidebar'
 import { useState, useEffect } from 'react'
-import type { WPCategory } from '../api/wordpress'
-import { getCategories, getTags, getUser } from '../api/wordpress'
+import type { WPCategory, WPMenuItem } from '../api/wordpress'
+import { getCategories, getTags, getUser, getMenu, getCategoryMenu } from '../api/wordpress'
 
 export default function Layout() {
   const navigate = useNavigate()
   const [categories, setCategories] = useState<WPCategory[]>([])
   const [tags, setTags] = useState<Array<{ id: number; name: string; slug: string }>>([])
   const [user, setUser] = useState<{ name: string; description: string; avatar_urls: Record<string, string> } | null>(null)
+  const [menuItems, setMenuItems] = useState<WPMenuItem[]>([])
+  const [categoryMenu, setCategoryMenu] = useState<WPMenuItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {})
     getTags().then(setTags).catch(() => {})
     getUser().then(setUser).catch(() => {})
+    getMenu().then(setMenuItems).catch(() => {})
+    getCategoryMenu().then(setCategoryMenu).catch(() => {})
   }, [])
 
   const handleSearch = (e: React.FormEvent) => {
@@ -34,14 +38,32 @@ export default function Layout() {
       <header className="header">
         <Link to="/" className="logo">Mango</Link>
         <nav className="nav">
-          <Link to="/">首页</Link>
-          <Link to="/archives">归档</Link>
-          <Link to="/links">友链</Link>
-          {categories.slice(0, 3).map((cat) => (
-            <Link key={cat.id} to={`/category/${cat.slug}`}>
-              {cat.name}
-            </Link>
-          ))}
+          {menuItems
+            .filter((item) => item.parent === 0)
+            .sort((a, b) => a.order - b.order)
+            .map((item) => {
+              const isInternal = (window as any).MANGO_DATA?.siteUrl
+                ? item.url.startsWith((window as any).MANGO_DATA.siteUrl)
+                : false
+              if (isInternal) {
+                const path = new URL(item.url).pathname
+                return (
+                  <Link key={item.id} to={path}>
+                    {item.title}
+                  </Link>
+                )
+              }
+              return (
+                <a
+                  key={item.id}
+                  href={item.url}
+                  target={item.target || '_blank'}
+                  rel={item.target ? undefined : 'noopener noreferrer'}
+                >
+                  {item.title}
+                </a>
+              )
+            })}
         </nav>
         <form className="header-search" onSubmit={handleSearch}>
           <input
@@ -66,8 +88,8 @@ export default function Layout() {
 
         {/* Content Wrapper */}
         <div className="content-wrapper">
-          {/* CategoryBar — 类似 Firefly 的分类 pill 导航 */}
-          {categories.length > 0 && <CategoryBar categories={categories} />}
+          {/* CategoryBar — 分类 pill 导航 */}
+          <CategoryBar categories={categories} menuItems={categoryMenu} />
 
           <main className="main-content">
             <Outlet />
