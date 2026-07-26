@@ -15,12 +15,15 @@
   },
   "dependencies": {
     "@types/turndown": "^5.0.6",
+    "katex": "^0.18.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.1",
     "react-syntax-highlighter": "^16.1.1",
+    "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
     "turndown": "^7.2.4"
   },
   "devDependencies": {

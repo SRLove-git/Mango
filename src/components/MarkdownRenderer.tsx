@@ -1,8 +1,11 @@
 import { useMemo, useState, createElement, type ReactElement, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import 'katex/dist/katex.min.css'
 import type { Components } from 'react-markdown'
 
 interface Props {
@@ -60,39 +63,40 @@ function CodeBlockMac({
         <span className="dot yellow" />
         <span className="dot green" />
         <span className="lang-label">{lang || 'code'}</span>
-        <button
-          className={`copy-btn${copied ? ' copied' : ''}`}
-          onClick={handleCopy}
-          title="复制代码"
-        >
-          {copied ? (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-              <span>已复制</span>
-            </>
-          ) : (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
-              <span>复制</span>
-            </>
-          )}
-        </button>
       </div>
+      <button
+        className={`copy-btn${copied ? ' copied' : ''}`}
+        onClick={handleCopy}
+        title="复制代码"
+      >
+        {copied ? (
+          <>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            <span>已复制</span>
+          </>
+        ) : (
+          <>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+            <span>复制</span>
+          </>
+        )}
+      </button>
       <SyntaxHighlighter
         language={lang}
         style={oneDark}
         showLineNumbers={false}
         customStyle={{
           margin: 0,
-          padding: '8px 12px',
+          padding: '12px 14px',
           borderRadius: 0,
           fontSize: '12px',
-          lineHeight: 1,
-          background: 'transparent',
+          lineHeight: 1.5,
+          background: '#1a1b1d',
         }}
         codeTagProps={{
           style: {
             fontFamily: 'var(--font-mono)',
+            background: '#1a1b1d',
           },
         }}
       >
@@ -242,7 +246,11 @@ export default function MarkdownRenderer({ content, className = '', mode = 'auto
 
   return (
     <div className={`detail-content ${className}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={components}
+      >
         {markdown}
       </ReactMarkdown>
     </div>

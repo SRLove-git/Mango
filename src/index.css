@@ -1276,6 +1276,87 @@ img {
   color: inherit;
 }
 
+/* ── macOS 风格代码块 ── */
+.code-block-mac {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: 1.5em 0;
+  border: 1px solid #333;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+
+.code-block-mac-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #1a1b1d;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.code-block-mac-header .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.code-block-mac-header .dot.red   { background: #ff5f5a; }
+.code-block-mac-header .dot.yellow { background: #ffbe2e; }
+.code-block-mac-header .dot.green  { background: #2aca44; }
+
+.code-block-mac-header .lang-label {
+  margin-left: 8px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  font-family: var(--font-mono);
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+}
+
+/* 复制按钮 — 右上角浮动 */
+.code-block-mac .copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  background: rgba(26,27,29,0.8);
+  color: rgba(255,255,255,0.5);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+  backdrop-filter: blur(4px);
+}
+.code-block-mac:hover .copy-btn {
+  opacity: 1;
+}
+.code-block-mac .copy-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.85);
+  border-color: rgba(255,255,255,0.25);
+}
+.code-block-mac .copy-btn.copied {
+  opacity: 1;
+  border-color: #2aca44;
+  color: #2aca44;
+}
+
+/* 修复 SyntaxHighlighter 内部的 pre 与全局 pre 样式冲突 */
+.detail-content .code-block-mac pre,
+.wiki-article-content .code-block-mac pre {
+  border: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 .detail-content blockquote {
   border-left: 3px solid var(--accent);
   margin: 1.5em 0;
