@@ -76,6 +76,23 @@ function mango_enqueue_scripts(): void {
 		];
 	}
 
+	// 站点统计（总字数、最后活动使用 transient 缓存，24 小时过期）
+	$stats_cache = get_transient( 'mango_site_stats' );
+	if ( false === $stats_cache ) {
+		global $wpdb;
+		$last_activity = $wpdb->get_var( "SELECT post_modified FROM {$wpdb->posts} WHERE post_type='post' AND post_status='publish' ORDER BY post_modified DESC LIMIT 1" );
+		$total_words   = 0;
+		$contents      = $wpdb->get_col( "SELECT post_content FROM {$wpdb->posts} WHERE post_type='post' AND post_status='publish'" );
+		foreach ( $contents as $content ) {
+			$total_words += mb_strlen( wp_strip_all_tags( $content ), 'UTF-8' );
+		}
+		$stats_cache = [
+			'total_words'   => $total_words,
+			'last_activity' => $last_activity ?: '',
+		];
+		set_transient( 'mango_site_stats', $stats_cache, DAY_IN_SECONDS );
+	}
+
 	// 将 WordPress 数据传递给前端
 	wp_localize_script( 'mango-app', 'MANGO_DATA', [
 		'siteUrl'        => site_url(),
@@ -107,6 +124,12 @@ function mango_enqueue_scripts(): void {
 		],
 		'sidebar' => [
 			'widgets' => $mango_sidebar_widgets,
+		],
+		'stats' => [
+			'total_posts'     => (int) wp_count_posts( 'post' )->publish,
+			'total_words'     => $stats_cache['total_words'],
+			'last_activity'   => $stats_cache['last_activity'],
+			'site_start_date' => $mango_basic['site_start_date'] ?? '',
 		],
 		'live2d' => [
 			'enabled'       => $mango_live2d['enabled'] ?? '1',

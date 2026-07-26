@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import PageTransition from './PageTransition'
 import CategoryBar from './CategoryBar'
 import Sidebar from './Sidebar'
@@ -11,6 +11,7 @@ import { ArticleTocProvider } from '../context/ArticleTocContext'
 
 export default function Layout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [categories, setCategories] = useState<WPCategory[]>([])
   const [tags, setTags] = useState<Array<{ id: number; name: string; slug: string }>>([])
   const [user, setUser] = useState<{ name: string; description: string; avatar_urls: Record<string, string> } | null>(null)
@@ -18,7 +19,52 @@ export default function Layout() {
   const [categoryMenu, setCategoryMenu] = useState<WPMenuItem[]>([])
   const [topics, setTopics] = useState<Topic[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const sidebarPosition = (window as any).MANGO_DATA?.layout?.sidebar_position || 'right'
+
+  // 滚动检测 — 为 navbar 添加阴影
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 50)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // 导航栏链接渲染函数
+  const renderNavLink = (item: WPMenuItem, isMobile: boolean = false) => {
+    const isInternal = (window as any).MANGO_DATA?.siteUrl
+      ? item.url.startsWith((window as any).MANGO_DATA.siteUrl)
+      : false
+    const href = isInternal ? new URL(item.url).pathname : item.url
+    const isActive = isInternal && location.pathname === href
+    const className = isMobile ? 'navbar-mobile-link' : 'navbar-link'
+
+    if (isInternal) {
+      return (
+        <Link
+          key={item.id}
+          to={href}
+          className={`${className}${isActive ? ' active' : ''}`}
+          onClick={isMobile ? () => setMobileMenuOpen(false) : undefined}
+        >
+          {item.title}
+        </Link>
+      )
+    }
+    return (
+      <a
+        key={item.id}
+        href={item.url}
+        className={className}
+        target={item.target || '_blank'}
+        rel={item.target ? undefined : 'noopener noreferrer'}
+      >
+        {item.title}
+      </a>
+    )
+  }
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {})
@@ -40,46 +86,54 @@ export default function Layout() {
     <SiteDataContext.Provider value={{ user, categories, tags, topics }}>
     <ArticleTocProvider>
     <div className="site-wrapper">
-      {/* Header / Navbar — 借鉴 Firefly 的粘性导航栏 */}
-      <header className="header">
-        <Link to="/" className="logo">Mango</Link>
-        <nav className="nav">
+      {/* Top Gradient Highlight — 参照 Firefly 的顶部渐变高光效果 */}
+      <div className="top-gradient-highlight" aria-hidden="true" />
+
+      {/* Header / Navbar — Firefly 风格重构 */}
+      <div id="navbar" className={scrolled ? 'navbar-scrolled' : ''}>
+        <div className="navbar-inner">
+          <div className="navbar-grid">
+            {/* Logo */}
+            <Link to="/" className="navbar-logo">Mango</Link>
+
+            {/* Desktop Nav Links */}
+            <nav className="navbar-links">
+              {menuItems
+                .filter((item) => item.parent === 0)
+                .sort((a, b) => a.order - b.order)
+                .map((item) => renderNavLink(item))}
+            </nav>
+
+            {/* Right Side Actions */}
+            <div className="navbar-actions">
+              <form className="navbar-search" onSubmit={handleSearch}>
+                <span className="navbar-search-icon">⌕</span>
+                <input
+                  type="search"
+                  placeholder="搜索"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </form>
+              <button
+                className="navbar-mobile-btn"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Menu"
+              >
+                {mobileMenuOpen ? '✕' : '☰'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu Panel */}
+        <div className={`navbar-mobile-panel${mobileMenuOpen ? ' open' : ''}`}>
           {menuItems
             .filter((item) => item.parent === 0)
             .sort((a, b) => a.order - b.order)
-            .map((item) => {
-              const isInternal = (window as any).MANGO_DATA?.siteUrl
-                ? item.url.startsWith((window as any).MANGO_DATA.siteUrl)
-                : false
-              if (isInternal) {
-                const path = new URL(item.url).pathname
-                return (
-                  <Link key={item.id} to={path}>
-                    {item.title}
-                  </Link>
-                )
-              }
-              return (
-                <a
-                  key={item.id}
-                  href={item.url}
-                  target={item.target || '_blank'}
-                  rel={item.target ? undefined : 'noopener noreferrer'}
-                >
-                  {item.title}
-                </a>
-              )
-            })}
-        </nav>
-        <form className="header-search" onSubmit={handleSearch}>
-          <input
-            type="search"
-            placeholder="搜索文章..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </form>
-      </header>
+            .map((item) => renderNavLink(item, true))}
+        </div>
+      </div>
 
       {/* ===== Main Grid — 借鉴 Firefly 的响应式 Grid 布局 ===== */}
       <div className={`main-grid${sidebarPosition === 'none' ? ' main-grid--no-sidebar' : ''}`}>

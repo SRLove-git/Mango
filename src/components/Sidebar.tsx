@@ -35,6 +35,7 @@ const DEFAULT_TITLES: Record<string, string> = {
   toc: '文章目录',
   about: '关于',
   site_info: '站点信息',
+  site_stats: '站点统计',
   custom_html: '自定义',
 }
 
@@ -350,6 +351,53 @@ export default function Sidebar({ side, className }: Props) {
             <li>
               <span className="info-label">标签</span>
               <span className="info-value">{tags.length}</span>
+            </li>
+          </ul>
+        </div>
+      )
+    }
+
+    // --- site_stats (站点统计) ---
+    if (w.type === 'site_stats') {
+      const stats = (window as any).MANGO_DATA?.stats || {}
+      const totalPosts = stats.total_posts || 0
+      const totalWords = stats.total_words || 0
+      const siteStartDate = stats.site_start_date || ''
+      const lastActivity = stats.last_activity || ''
+      const runningDays = siteStartDate
+        ? Math.floor((Date.now() - new Date(siteStartDate).getTime()) / 86400000)
+        : 0
+      const daysSinceLastActivity = lastActivity
+        ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / 86400000)
+        : 0
+
+      return (
+        <div className="glass" key={key}>
+          <h3 className="sidebar-title">{title}</h3>
+          <ul className="site-stats-list">
+            <li>
+              <span className="stats-label">文章</span>
+              <span className="stats-value">{totalPosts}</span>
+            </li>
+            <li>
+              <span className="stats-label">分类</span>
+              <span className="stats-value">{categories.length}</span>
+            </li>
+            <li>
+              <span className="stats-label">标签</span>
+              <span className="stats-value">{tags.length}</span>
+            </li>
+            <li>
+              <span className="stats-label">总字数</span>
+              <span className="stats-value">{totalWords.toLocaleString()}</span>
+            </li>
+            <li>
+              <span className="stats-label">运行时长</span>
+              <span className="stats-value">{runningDays} 天</span>
+            </li>
+            <li>
+              <span className="stats-label">最后活动</span>
+              <span className="stats-value">{daysSinceLastActivity} 天前</span>
             </li>
           </ul>
         </div>
