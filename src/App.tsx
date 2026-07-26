@@ -6,6 +6,7 @@ import PostDetail from './pages/PostDetail'
 import Page from './pages/Page'
 import Category from './pages/Category'
 import Search from './pages/Search'
+import Links from './pages/Links'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/post/:slug" element={<PostDetail />} />
         <Route path="/category/:slug" element={<Category />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/links" element={<Links />} />
       </Route>
     </Routes>
   )

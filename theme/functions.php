@@ -59,6 +59,12 @@ function mango_enqueue_scripts(): void {
 add_action('wp_enqueue_scripts', 'mango_enqueue_scripts');
 
 /**
+ * 启用 WordPress 原生链接管理器（Link Manager）
+ * 在后台侧边栏添加「链接」菜单，支持分类和完整 CRUD
+ */
+add_filter('pre_option_link_manager_enabled', '__return_true');
+
+/**
  * 添加主题支持特性
  */
 function mango_theme_setup(): void {
@@ -210,7 +216,7 @@ function mango_render_admin_page(): void {
         return;
     }
 
-    // 处理表单提交
+    // 基本设置
     if (isset($_POST['mango_save'])) {
         check_admin_referer('mango_settings_action', 'mango_settings_nonce');
 
@@ -251,13 +257,12 @@ function mango_render_admin_page(): void {
 
         // 更新已有方案
         if (!empty($_POST['mango_edit_scheme'])) {
-            $edit_ids = (array) $_POST['mango_edit_scheme'];
-            $color_keys = ['bg','glass','glass_hover','border','border_hover','purple','purple_glow','blue','blue_glow','text','text_muted','text_dim'];
+            $edit_ids = $_POST['mango_edit_scheme'];
             foreach ($schemes as &$s) {
                 if (isset($edit_ids[$s['id']])) {
-                    $s['name'] = sanitize_text_field($_POST['mango_edit_name'][$s['id']] ?? $s['name']);
+                    $color_keys = ['bg','glass','glass_hover','border','border_hover','purple','purple_glow','blue','blue_glow','text','text_muted','text_dim'];
                     foreach ($color_keys as $k) {
-                        $s[$k] = sanitize_hex_color($_POST['mango_edit_' . $k][$s['id']] ?? '');
+                        $s[$k] = sanitize_hex_color($_POST['mango_color_' . $s['id'] . '_' . $k] ?? '');
                     }
                 }
             }
@@ -265,16 +270,17 @@ function mango_render_admin_page(): void {
             $changed = true;
         }
 
+        // 保存方案
         if ($changed) {
             update_option('mango_color_schemes', $schemes);
         }
 
-        // 主题风格 — 支持内置和自定义 ID
+        // 应用主题方案
         if (!empty($_POST['mango_theme_style'])) {
-            set_theme_mod('mango_theme_style', mango_sanitize_theme_style($_POST['mango_theme_style']));
+            set_theme_mod('mango_theme_style', sanitize_text_field($_POST['mango_theme_style']));
         }
 
-        // 卡片圆角
+        // 保存卡片圆角
         if (isset($_POST['mango_card_radius'])) {
             $radius = intval($_POST['mango_card_radius']);
             $radius = max(0, min(50, $radius));
@@ -292,6 +298,8 @@ function mango_render_admin_page(): void {
     $avatar_url  = $basic['avatar_url'] ?? '';
     $footer_text = $basic['footer_text'] ?? '';
 
+    // 读取自定义配色方案
+    $schemes = get_option('mango_color_schemes', []);
     $tab = $_GET['tab'] ?? 'basic';
     ?>
 
@@ -535,36 +543,29 @@ $scheme_defaults = [
     <!-- 删除确认 & 编辑折叠 JS -->
     <script>
     jQuery(function($){
-        // 切换编辑表单
-        $('.mango-toggle-edit').on('click', function(){
-            var target = $('#' + $(this).data('target'));
+        $(".mango-toggle-edit").on("click", function(){
+            var target = $("#" + $(this).data("target"));
             target.slideToggle(200);
-            // 重新初始化编辑区域内的颜色选择器
-            target.find('.mango-color-picker').each(function(){
-                if (!$(this).hasClass('wp-color-picker')) {
+            target.find(".mango-color-picker").each(function(){
+                if (!$(this).hasClass("wp-color-picker")) {
                     $(this).wpColorPicker();
                 }
             });
         });
-
-        // 删除确认
-        $('.mango-delete-scheme').on('click', function(){
+        $(".mango-delete-scheme").on("click", function(){
             var btn = $(this);
-            var name = btn.data('name');
-            if (confirm('<?php _e('确定删除配色方案"', 'mango'); ?>' + name + '<?php _e('"吗？', 'mango'); ?>')) {
-                // 创建隐藏的删除标记字段并提交
-                var form = btn.closest('form');
-                $('<input>').attr({type:'hidden', name:'mango_delete_scheme', value:btn.data('id')}).appendTo(form);
-                form.find('[name="mango_save"]').trigger('click');
+            var name = btn.data("name");
+            if (confirm("<?php _e('确定删除配色方案"', 'mango'); ?>" + name + "<?php _e('"吗？', 'mango'); ?>")) {
+                var form = btn.closest("form");
+                $("<input>").attr({type:"hidden", name:"mango_delete_scheme", value:btn.data("id")}).appendTo(form);
+                form.find("[name=\"mango_save\"]").trigger("click");
             }
         });
-
-        // 卡片点击选中
-        $('.mango-scheme-card').on('click', function(e){
-            if ($(e.target).closest('button, input, .mango-edit-form, .wp-picker-holder').length) return;
-            $(this).find('input[type="radio"]').prop('checked', true);
-            $(this).closest('.mango-scheme-grid').find('.mango-scheme-card').removeClass('selected');
-            $(this).addClass('selected');
+        $(".mango-scheme-card").on("click", function(e){
+            if ($(e.target).closest("button, input, .mango-edit-form, .wp-picker-holder").length) return;
+            $(this).find("input[type=\"radio\"]").prop("checked", true);
+            $(this).closest(".mango-scheme-grid").find(".mango-scheme-card").removeClass("selected");
+            $(this).addClass("selected");
         });
     });
     </script>
@@ -579,10 +580,8 @@ $scheme_defaults = [
     .mango-sidebar-tab.active { background:#2271b1; color:#fff; }
     .mango-sidebar-tab.active .dashicons { color:#fff; }
     .mango-settings-content { flex:1; min-width:0; background:#fff; border:1px solid #c3c4c7; border-radius:4px; padding:20px 24px; }
-
     .mango-scheme-section { margin-bottom:28px; }
     .mango-scheme-section h3 { margin:0 0 12px; font-size:14px; font-weight:600; }
-
     .mango-scheme-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; margin-bottom:16px; }
     .mango-scheme-card { display:block; border:1px solid #dcdcde; border-radius:4px; padding:12px; cursor:pointer; transition:border-color 0.15s; background:#f6f7f7; position:relative; }
     .mango-scheme-card.selected { border-color:#2271b1; box-shadow:0 0 0 1px #2271b1; background:#f0f6fc; }
@@ -593,25 +592,19 @@ $scheme_defaults = [
     .mango-scheme-info strong { display:block; font-size:13px; }
     .mango-scheme-info span { font-size:11px; color:#646970; }
     .mango-scheme-badge { display:inline-block; padding:1px 8px; border-radius:3px; background:#2271b1; color:#fff; font-size:10px; font-weight:600; position:absolute; top:10px; right:10px; }
-
     .mango-scheme-card--edit { padding-bottom:6px; }
     .mango-scheme-select { display:block; cursor:pointer; }
     .mango-scheme-actions { display:flex; gap:6px; margin-top:4px; }
     .mango-scheme-actions .button { font-size:11px; min-height:0; padding:2px 10px; line-height:1.8; }
-
     .mango-edit-form { background:#fff; border:1px solid #dcdcde; border-radius:4px; padding:12px; margin-top:8px; }
     .mango-edit-form .regular-text { width:100%; max-width:320px; }
-
     .mango-color-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
     .mango-color-cell { display:flex; flex-direction:column; gap:3px; }
     .mango-color-cell span { font-size:11px; color:#50575e; white-space:nowrap; }
-
     .mango-add-form { border-style:dashed; background:#f9f9f9; }
-
     .mango-radius-control { display:flex; align-items:center; gap:12px; max-width:360px; }
     .mango-radius-control input[type="range"] { flex:1; }
     .mango-radius-value { font-size:16px; font-weight:600; color:#2271b1; min-width:44px; }
-
     @media (max-width:782px) {
         .mango-settings-wrap { flex-direction:column; }
         .mango-settings-sidebar { width:100%; display:flex; }
@@ -694,3 +687,34 @@ function mango_output_radius_css(): void {
     echo '</style>' . "\n";
 }
 add_action('wp_head', 'mango_output_radius_css', 99);
+
+/**
+ * 注册自定义 REST API 路由 — 获取友链数据（使用原生 Link Manager）
+ */
+function mango_register_links_route(): void {
+    register_rest_route('mango/v1', '/links', [
+        'methods'  => 'GET',
+        'callback' => function (): WP_REST_Response {
+            $bookmarks = get_bookmarks([
+                'orderby'        => 'rating',
+                'order'          => 'DESC',
+                'hide_invisible' => 1,
+                'show_updated'   => 0,
+            ]);
+
+            $links = [];
+            foreach ($bookmarks as $bm) {
+                $links[] = [
+                    'title'       => $bm->link_name,
+                    'url'         => $bm->link_url,
+                    'avatar'      => $bm->link_image,
+                    'description' => $bm->link_description,
+                ];
+            }
+
+            return new WP_REST_Response($links, 200);
+        },
+        'permission_callback' => '__return_true',
+    ]);
+}
+add_action('rest_api_init', 'mango_register_links_route');

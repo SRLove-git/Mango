@@ -36,7 +36,8 @@ export default function Layout() {
         <nav className="nav">
           <Link to="/">首页</Link>
           <Link to="/archives">归档</Link>
-          {categories.slice(0, 4).map((cat) => (
+          <Link to="/links">友链</Link>
+          {categories.slice(0, 3).map((cat) => (
             <Link key={cat.id} to={`/category/${cat.slug}`}>
               {cat.name}
             </Link>
