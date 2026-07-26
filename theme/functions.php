@@ -338,6 +338,11 @@ function mango_render_admin_page(): void {
                     <span class="dashicons dashicons-art"></span>
                     <?php _e('主题设置', 'mango'); ?>
                 </a>
+                <a href="?page=mango-settings&tab=topics"
+                   class="mango-sidebar-tab <?php echo $tab === 'topics' ? 'active' : ''; ?>">
+                    <span class="dashicons dashicons-welcome-write-blog"></span>
+                    <?php _e('专栏管理', 'mango'); ?>
+                </a>
             </div>
 
             <!-- 内容区 -->
@@ -402,6 +407,218 @@ function mango_render_admin_page(): void {
                             <?php _e('保存设置', 'mango'); ?>
                         </button>
                     </p>
+
+                    <?php elseif ($tab === 'topics'): /* === 专栏管理选项卡 === */ ?>
+
+                    <h2><?php _e('专栏管理', 'mango'); ?></h2>
+                    <p class="description"><?php _e('管理博客专栏。在文章编辑页面的「自定义字段」中添加 <code>topic</code> 键（值为专栏 ID）将文章关联到专栏。', 'mango'); ?></p>
+
+                    <?php
+                    $topics = get_option('mango_topics', []);
+                    $all_posts = get_posts([
+                        'post_type'      => 'post',
+                        'posts_per_page' => -1,
+                        'meta_key'       => 'topic',
+                        'meta_compare'   => 'EXISTS',
+                    ]);
+                    $posts_by_topic = [];
+                    foreach ($all_posts as $p) {
+                        $slug = get_post_meta($p->ID, 'topic', true);
+                        if (!empty($slug)) {
+                            $posts_by_topic[$slug][] = $p;
+                        }
+                    }
+                    ?>
+
+                    <!-- 专栏列表 -->
+                    <div id="mango-topics-admin">
+                        <div id="mango-topics-list">
+                            <?php if (empty($topics)): ?>
+                                <p style="color:var(--text-dim);"><?php _e('暂无专栏，请添加。', 'mango'); ?></p>
+                            <?php else: ?>
+                                <?php foreach ($topics as $slug => $topic): ?>
+                                    <?php $topic_posts = $posts_by_topic[$slug] ?? []; ?>
+                                    <div class="mango-topic-item" data-slug="<?php echo esc_attr($slug); ?>">
+                                        <div class="mango-topic-header">
+                                            <strong class="mango-topic-name"><?php echo esc_html($topic['title'] ?? $topic['name'] ?? $slug); ?></strong>
+                                            <span class="mango-topic-id">ID: <code><?php echo esc_html($slug); ?></code></span>
+                                            <span class="mango-topic-count"><?php echo count($topic_posts); ?> 篇文章</span>
+                                            <button type="button" class="button mango-edit-topic">编辑</button>
+                                            <button type="button" class="button mango-delete-topic" data-slug="<?php echo esc_attr($slug); ?>">删除</button>
+                                        </div>
+                                        <?php if (!empty($topic_posts)): ?>
+                                            <ul class="mango-topic-posts">
+                                                <?php foreach ($topic_posts as $tp): ?>
+                                                    <li><a href="<?php echo get_edit_post_link($tp->ID); ?>" target="_blank"><?php echo esc_html($tp->post_title); ?></a></li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+
+                        <hr style="margin:24px 0;border-color:var(--border);">
+
+                        <h3><?php _e('添加/编辑专栏', 'mango'); ?></h3>
+                        <div class="mango-topic-form">
+                            <table class="form-table">
+                                <tr>
+                                    <th scope="row"><label for="mango_topic_id"><?php _e('专栏 ID', 'mango'); ?></label></th>
+                                    <td>
+                                        <input type="text" id="mango_topic_id" class="regular-text" placeholder="clearn" style="font-family:monospace;">
+                                        <p class="description"><?php _e('唯一标识，只能包含小写字母、数字、下划线、连字符。创建后不可修改。', 'mango'); ?></p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="mango_topic_name"><?php _e('短名称', 'mango'); ?></label></th>
+                                    <td>
+                                        <input type="text" id="mango_topic_name" class="regular-text" placeholder="<?php _e('C语言', 'mango'); ?>">
+                                        <p class="description"><?php _e('用于面包屑导航等紧凑显示。', 'mango'); ?></p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="mango_topic_title"><?php _e('完整标题', 'mango'); ?></label></th>
+                                    <td>
+                                        <input type="text" id="mango_topic_title" class="regular-text" placeholder="<?php _e('C语言程序设计', 'mango'); ?>">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="mango_topic_desc"><?php _e('描述', 'mango'); ?></label></th>
+                                    <td>
+                                        <textarea id="mango_topic_desc" class="large-text" rows="3" placeholder="<?php _e('C语言程序设计课程OJ...', 'mango'); ?>"></textarea>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="mango_topic_icon"><?php _e('图标 URL', 'mango'); ?></label></th>
+                                    <td>
+                                        <input type="url" id="mango_topic_icon" class="regular-text" placeholder="https://example.com/icon.png">
+                                        <p class="description"><?php _e('专栏卡片上显示的图标，建议 96x96 以上。', 'mango'); ?></p>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p>
+                                <button type="button" class="button button-primary" id="mango-save-topic"><?php _e('保存专栏', 'mango'); ?></button>
+                                <button type="button" class="button" id="mango-cancel-edit-topic" style="display:none;"><?php _e('取消', 'mango'); ?></button>
+                            </p>
+                        </div>
+                    </div>
+
+                    <script>
+                    jQuery(function($) {
+                        var topics = <?php echo json_encode($topics); ?>;
+                        var isEditing = false;
+                        var editingSlug = '';
+
+                        // 保存专栏
+                        $('#mango-save-topic').on('click', function() {
+                            var slug = $('#mango_topic_id').val().trim();
+                            var name = $('#mango_topic_name').val().trim();
+
+                            if (!slug) { alert('请输入专栏 ID'); return; }
+                            if (!/^[a-z0-9_-]+$/.test(slug)) { alert('专栏 ID 只能包含小写字母、数字、下划线、连字符'); return; }
+                            if (!name) { alert('请输入短名称'); return; }
+
+                            // 如果是新增且 slug 已存在
+                            if (!isEditing && topics[slug]) {
+                                if (!confirm('专栏 "' + slug + '" 已存在，是否覆盖？')) return;
+                            }
+
+                            topics[slug] = {
+                                name: name,
+                                title: $('#mango_topic_title').val().trim() || name,
+                                description: $('#mango_topic_desc').val().trim(),
+                                icon: $('#mango_topic_icon').val().trim(),
+                                order_by: '-date',
+                            };
+
+                            // POST 到 REST API
+                            $.ajax({
+                                url: '<?php echo rest_url('mango/v1/topics/save'); ?>',
+                                method: 'POST',
+                                data: JSON.stringify(topics),
+                                contentType: 'application/json',
+                                beforeSend: function(xhr) {
+                                    xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce('wp_rest'); ?>');
+                                },
+                                success: function() {
+                                    location.reload();
+                                },
+                                error: function() {
+                                    alert('保存失败，请重试');
+                                }
+                            });
+                        });
+
+                        // 编辑专栏
+                        $(document).on('click', '.mango-edit-topic', function() {
+                            var item = $(this).closest('.mango-topic-item');
+                            var slug = item.data('slug');
+                            var topic = topics[slug];
+                            if (!topic) return;
+
+                            $('#mango_topic_id').val(slug).prop('readonly', true);
+                            $('#mango_topic_name').val(topic.name || '');
+                            $('#mango_topic_title').val(topic.title || '');
+                            $('#mango_topic_desc').val(topic.description || '');
+                            $('#mango_topic_icon').val(topic.icon || '');
+                            $('#mango-cancel-edit-topic').show();
+                            isEditing = true;
+                            editingSlug = slug;
+                            $('html, body').animate({ scrollTop: $('#mango-topic-form').offset().top - 50 }, 300);
+                        });
+
+                        // 取消编辑
+                        $('#mango-cancel-edit-topic').on('click', function() {
+                            $('#mango_topic_id').val('').prop('readonly', false);
+                            $('#mango_topic_name').val('');
+                            $('#mango_topic_title').val('');
+                            $('#mango_topic_desc').val('');
+                            $('#mango_topic_icon').val('');
+                            $(this).hide();
+                            isEditing = false;
+                            editingSlug = '';
+                        });
+
+                        // 删除专栏
+                        $(document).on('click', '.mango-delete-topic', function() {
+                            var slug = $(this).data('slug');
+                            if (!confirm('确定要删除专栏 "' + slug + '" 吗？（不会删除关联的文章）')) return;
+
+                            delete topics[slug];
+
+                            $.ajax({
+                                url: '<?php echo rest_url('mango/v1/topics/save'); ?>',
+                                method: 'POST',
+                                data: JSON.stringify(topics),
+                                contentType: 'application/json',
+                                beforeSend: function(xhr) {
+                                    xhr.setRequestHeader('X-WP-Nonce', '<?php echo wp_create_nonce('wp_rest'); ?>');
+                                },
+                                success: function() {
+                                    location.reload();
+                                },
+                                error: function() {
+                                    alert('删除失败，请重试');
+                                }
+                            });
+                        });
+                    });
+                    </script>
+
+                    <style>
+                    #mango-topics-admin { max-width: 800px; }
+                    .mango-topic-item { background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 4px; padding: 12px 16px; margin-bottom: 12px; }
+                    .mango-topic-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+                    .mango-topic-name { font-size: 14px; }
+                    .mango-topic-id { font-size: 12px; color: #646970; }
+                    .mango-topic-id code { font-size: 12px; }
+                    .mango-topic-count { font-size: 12px; color: #646970; margin-right: auto; }
+                    .mango-topic-posts { margin: 8px 0 0; padding: 8px 0 0 16px; border-top: 1px solid #e0e0e0; list-style: disc; }
+                    .mango-topic-posts li { margin: 4px 0; font-size: 13px; }
+                    .mango-topic-posts a { color: #2271b1; }
+                    .mango-topic-posts a:hover { color: #135e96; }
+                    </style>
 
                     <?php else: /* === 主题设置选项卡 === */ ?>
 
@@ -1419,3 +1636,214 @@ function mango_save_link_articles(int $link_id): void {
     }
 }
 add_action('edit_link', 'mango_save_link_articles');
+
+/* =====================================================
+ * 专栏系统 (Topic) — 类似 Stellar 的专栏
+ * ===================================================== */
+
+/**
+ * 注册 topic post meta 并暴露到 REST API
+ */
+function mango_register_topic_meta(): void {
+    register_post_meta('post', 'topic', [
+        'show_in_rest'  => true,
+        'single'        => true,
+        'type'          => 'string',
+        'default'       => '',
+        'sanitize_callback' => 'sanitize_text_field',
+    ]);
+}
+add_action('init', 'mango_register_topic_meta');
+
+/**
+ * 注册专栏 REST API 路由
+ */
+function mango_register_topics_routes(): void {
+    // GET /topics — 获取所有专栏列表（含关联文章）
+    register_rest_route('mango/v1', '/topics', [
+        'methods'  => 'GET',
+        'callback' => 'mango_get_topics',
+        'permission_callback' => '__return_true',
+    ]);
+
+    // GET /topics/{slug} — 获取单个专栏详情（含关联文章）
+    register_rest_route('mango/v1', '/topics/(?P<slug>[a-zA-Z0-9_-]+)', [
+        'methods'  => 'GET',
+        'callback' => 'mango_get_topic',
+        'permission_callback' => '__return_true',
+    ]);
+
+    // POST /topics/save — 保存专栏数据（管理员）
+    register_rest_route('mango/v1', '/topics/save', [
+        'methods'             => 'POST',
+        'callback'            => 'mango_save_topics',
+        'permission_callback' => function (): bool {
+            return current_user_can('manage_options');
+        },
+    ]);
+}
+add_action('rest_api_init', 'mango_register_topics_routes');
+
+/**
+ * 获取所有专栏列表（含关联文章）
+ */
+function mango_get_topics(): WP_REST_Response {
+    $topics = get_option('mango_topics', []);
+
+    if (empty($topics)) {
+        return new WP_REST_Response([], 200);
+    }
+
+    // 获取有关联 topic 字段的所有文章
+    $posts_query = new WP_Query([
+        'post_type'      => 'post',
+        'posts_per_page' => -1,
+        'meta_key'       => 'topic',
+        'meta_compare'   => 'EXISTS',
+    ]);
+
+    // 按 topic slug 分组文章
+    $posts_by_topic = [];
+    if ($posts_query->have_posts()) {
+        foreach ($posts_query->posts as $p) {
+            $topic_slug = get_post_meta($p->ID, 'topic', true);
+            if (!empty($topic_slug)) {
+                if (!isset($posts_by_topic[$topic_slug])) {
+                    $posts_by_topic[$topic_slug] = [];
+                }
+                $posts_by_topic[$topic_slug][] = [
+                    'id'    => $p->ID,
+                    'title' => get_the_title($p),
+                    'slug'  => $p->post_name,
+                    'date'  => $p->post_date,
+                    'excerpt' => get_the_excerpt($p),
+                ];
+            }
+        }
+    }
+
+    $result = [];
+    foreach ($topics as $slug => $topic) {
+        $posts = $posts_by_topic[$slug] ?? [];
+
+        // 排序
+        $order_by = $topic['order_by'] ?? '-date';
+        usort($posts, function ($a, $b) use ($order_by) {
+            if ($order_by === 'date') {
+                return strcmp($a['date'], $b['date']);
+            }
+            return strcmp($b['date'], $a['date']); // -date 降序
+        });
+
+        $result[] = [
+            'id'          => $slug,
+            'name'        => $topic['name'] ?? $slug,
+            'title'       => $topic['title'] ?? $topic['name'] ?? $slug,
+            'description' => $topic['description'] ?? '',
+            'icon'        => $topic['icon'] ?? '',
+            'order_by'    => $order_by,
+            'post_count'  => count($posts),
+            'posts'       => $posts,
+        ];
+    }
+
+    return new WP_REST_Response($result, 200);
+}
+
+/**
+ * 获取单个专栏详情（含关联文章）
+ */
+function mango_get_topic(WP_REST_Request $request): WP_REST_Response {
+    $slug  = $request->get_param('slug');
+    $topics = get_option('mango_topics', []);
+
+    if (!isset($topics[$slug])) {
+        return new WP_REST_Response(['error' => '专栏不存在'], 404);
+    }
+
+    $topic = $topics[$slug];
+
+    // 获取该专栏下的所有文章
+    $posts_query = new WP_Query([
+        'post_type'      => 'post',
+        'posts_per_page' => -1,
+        'meta_key'       => 'topic',
+        'meta_value'     => $slug,
+    ]);
+
+    $posts = [];
+    if ($posts_query->have_posts()) {
+        foreach ($posts_query->posts as $p) {
+            $thumbnail = get_the_post_thumbnail_url($p->ID, 'full');
+            $categories = wp_get_post_categories($p->ID, ['fields' => 'all']);
+            $cat_data = [];
+            foreach ($categories as $cat) {
+                $cat_data[] = [
+                    'id'   => $cat->term_id,
+                    'name' => $cat->name,
+                    'slug' => $cat->slug,
+                ];
+            }
+
+            $posts[] = [
+                'id'         => $p->ID,
+                'title'      => get_the_title($p),
+                'slug'       => $p->post_name,
+                'date'       => $p->post_date,
+                'excerpt'    => get_the_excerpt($p),
+                'thumbnail'  => $thumbnail ?: '',
+                'categories' => $cat_data,
+            ];
+        }
+    }
+
+    // 排序
+    $order_by = $topic['order_by'] ?? '-date';
+    usort($posts, function ($a, $b) use ($order_by) {
+        if ($order_by === 'date') {
+            return strcmp($a['date'], $b['date']);
+        }
+        return strcmp($b['date'], $a['date']);
+    });
+
+    return new WP_REST_Response([
+        'id'          => $slug,
+        'name'        => $topic['name'] ?? $slug,
+        'title'       => $topic['title'] ?? $topic['name'] ?? $slug,
+        'description' => $topic['description'] ?? '',
+        'icon'        => $topic['icon'] ?? '',
+        'order_by'    => $order_by,
+        'post_count'  => count($posts),
+        'posts'       => $posts,
+    ], 200);
+}
+
+/**
+ * 保存专栏数据（管理员接口）
+ */
+function mango_save_topics(WP_REST_Request $request): WP_REST_Response {
+    $topics = $request->get_json_params();
+
+    if (!is_array($topics)) {
+        return new WP_REST_Response(['error' => '数据格式错误'], 400);
+    }
+
+    // 净化数据
+    $sanitized = [];
+    foreach ($topics as $slug => $topic) {
+        $slug = sanitize_title($slug);
+        if (empty($slug)) continue;
+
+        $sanitized[$slug] = [
+            'name'        => sanitize_text_field($topic['name'] ?? ''),
+            'title'       => sanitize_text_field($topic['title'] ?? ''),
+            'description' => sanitize_textarea_field($topic['description'] ?? ''),
+            'icon'        => esc_url_raw($topic['icon'] ?? ''),
+            'order_by'    => ($topic['order_by'] ?? '-date') === 'date' ? 'date' : '-date',
+        ];
+    }
+
+    update_option('mango_topics', $sanitized, false);
+
+    return new WP_REST_Response(['message' => '专栏数据已保存', 'topics' => $sanitized], 200);
+}

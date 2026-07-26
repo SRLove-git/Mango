@@ -1,16 +1,40 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import type { WPCategory } from '../api/wordpress'
+import type { Topic } from '../api/wordpress'
 
 interface Props {
   side: 'left' | 'right'
   user: { name: string; description: string; avatar_urls: Record<string, string> } | null
   categories: WPCategory[]
   tags: Array<{ id: number; name: string; slug: string }>
+  topics?: Topic[]
   className?: string
 }
 
-export default function Sidebar({ side, user, categories, tags, className }: Props) {
+export default function Sidebar({ side, user, categories, tags, topics, className }: Props) {
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // 从 URL 推断当前专栏上下文
+  let currentTopic: Topic | undefined
+  let currentPostSlug: string | undefined
+
+  if (topics && topics.length > 0) {
+    const pathParts = location.pathname.split('/').filter(Boolean)
+
+    if (pathParts[0] === 'topic') {
+      // /topic/{slug} 或 /topic/{slug}/post/{postSlug}
+      currentTopic = topics.find((t) => t.id === pathParts[1])
+      currentPostSlug = pathParts[3]
+    } else if (pathParts[0] === 'post') {
+      // /post/{slug} — 查找该文章所属专栏
+      const slug = pathParts[1]
+      if (slug) {
+        currentTopic = topics.find((t) => t.posts.some((p) => p.slug === slug))
+        currentPostSlug = slug
+      }
+    }
+  }
 
   if (side === 'left') {
     return (
@@ -29,6 +53,36 @@ export default function Sidebar({ side, user, categories, tags, className }: Pro
             <p>{user?.description || '分享技术、生活与思考'}</p>
           </div>
 
+          {/* 专栏文章目录（在 profile-card 下方） */}
+          {currentTopic && currentTopic.posts.length > 0 && (
+            <div className="glass">
+              <h3 className="sidebar-title">
+                <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+                  </svg>
+                  {currentTopic.title}
+                </span>
+              </h3>
+              <ul className="topic-article-dir">
+                {currentTopic.posts.map((p, i) => {
+                  const path = `/topic/${currentTopic!.id}/post/${p.slug}`
+                  const isActive = p.slug === currentPostSlug
+                  return (
+                    <li
+                      key={p.id}
+                      className={isActive ? 'active' : ''}
+                      onClick={() => navigate(path)}
+                    >
+                      <span className="dir-index">{i + 1}</span>
+                      <span className="dir-title">{p.title}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
           <div className="glass">
             <h3 className="sidebar-title">分类</h3>
             <ul className="category-list">
@@ -40,9 +94,40 @@ export default function Sidebar({ side, user, categories, tags, className }: Pro
               ))}
             </ul>
           </div>
+
+          {/* 专栏目录 */}
+          {topics && topics.length > 0 && (
+            <div className="glass">
+              <h3 className="sidebar-title">
+                <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  专栏
+                  <span className="pill-count" style={{ background:'var(--glass)' }}>{topics.length}</span>
+                </span>
+              </h3>
+              <ul className="category-list topic-sidebar-list">
+                {topics.map((t) => {
+                  const firstPost = t.posts[0]
+                  const path = firstPost
+                    ? `/topic/${t.id}/post/${firstPost.slug}`
+                    : `/topic/${t.id}`
+                  return (
+                    <li key={t.id} onClick={() => navigate(path)}>
+                      <span className="topic-sidebar-name">
+                        {t.icon && (
+                          <img src={t.icon} alt="" className="topic-sidebar-icon" />
+                        )}
+                        <span>{t.title}</span>
+                      </span>
+                      <span className="count">{t.post_count}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
         </div>
 
-        {/* Sticky section: 社交链接等 */}
+        {/* Sticky section: 关于 */}
         <div className="sidebar-sticky">
           <div className="glass">
             <h3 className="sidebar-title">关于</h3>

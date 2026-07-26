@@ -7,6 +7,8 @@ import Page from './pages/Page'
 import Category from './pages/Category'
 import Search from './pages/Search'
 import Links from './pages/Links'
+import Topics from './pages/Topics'
+import TopicDetail from './pages/TopicDetail'
 
 export default function App() {
   return (
@@ -19,6 +21,9 @@ export default function App() {
         <Route path="/category/:slug" element={<Category />} />
         <Route path="/search" element={<Search />} />
         <Route path="/links" element={<Links />} />
+        <Route path="/topics" element={<Topics />} />
+        <Route path="/topic/:slug" element={<TopicDetail />} />
+        <Route path="/topic/:slug/post/:postSlug" element={<PostDetail />} />
       </Route>
     </Routes>
   )

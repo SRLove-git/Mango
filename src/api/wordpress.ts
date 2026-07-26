@@ -1,6 +1,6 @@
 const API_URL = (window as any).MANGO_DATA?.apiUrl || '/wp-json/wp/v2'
 
-interface WPPost {
+export interface WPPost {
   id: number
   title: { rendered: string }
   excerpt: { rendered: string }
@@ -8,6 +8,9 @@ interface WPPost {
   slug: string
   date: string
   featured_media: number
+  meta?: {
+    topic?: string
+  }
   _embedded?: {
     'wp:featuredmedia'?: Array<{
       source_url: string
@@ -237,6 +240,56 @@ export async function getCategoryMenu(): Promise<WPMenuItem[]> {
     return Array.isArray(data) ? data : []
   } catch {
     return []
+  }
+}
+
+/* =====================================================
+ * 专栏系统 (Topic)
+ * ===================================================== */
+
+export interface Topic {
+  id: string
+  name: string
+  title: string
+  description: string
+  icon: string
+  order_by: string
+  post_count: number
+  posts: TopicPost[]
+}
+
+export interface TopicPost {
+  id: number
+  title: string
+  slug: string
+  date: string
+  excerpt: string
+  thumbnail?: string
+  categories?: Array<{ id: number; name: string; slug: string }>
+}
+
+export async function getTopics(): Promise<Topic[]> {
+  const siteUrl = (window as any).MANGO_DATA?.siteUrl || ''
+  const url = `${siteUrl}/wp-json/mango/v1/topics`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
+  }
+}
+
+export async function getTopic(slug: string): Promise<Topic | null> {
+  const siteUrl = (window as any).MANGO_DATA?.siteUrl || ''
+  const url = `${siteUrl}/wp-json/mango/v1/topics/${encodeURIComponent(slug)}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
   }
 }
 

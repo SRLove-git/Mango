@@ -3,8 +3,8 @@ import ProgressBar from './ProgressBar'
 import CategoryBar from './CategoryBar'
 import Sidebar from './Sidebar'
 import { useState, useEffect } from 'react'
-import type { WPCategory, WPMenuItem } from '../api/wordpress'
-import { getCategories, getTags, getUser, getMenu, getCategoryMenu } from '../api/wordpress'
+import type { WPCategory, WPMenuItem, Topic } from '../api/wordpress'
+import { getCategories, getTags, getUser, getMenu, getCategoryMenu, getTopics } from '../api/wordpress'
 
 export default function Layout() {
   const navigate = useNavigate()
@@ -13,6 +13,7 @@ export default function Layout() {
   const [user, setUser] = useState<{ name: string; description: string; avatar_urls: Record<string, string> } | null>(null)
   const [menuItems, setMenuItems] = useState<WPMenuItem[]>([])
   const [categoryMenu, setCategoryMenu] = useState<WPMenuItem[]>([])
+  const [topics, setTopics] = useState<Topic[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function Layout() {
     getUser().then(setUser).catch(() => {})
     getMenu().then(setMenuItems).catch(() => {})
     getCategoryMenu().then(setCategoryMenu).catch(() => {})
+    getTopics().then(setTopics).catch(() => {})
   }, [])
 
   const handleSearch = (e: React.FormEvent) => {
@@ -83,6 +85,7 @@ export default function Layout() {
           user={user}
           categories={categories}
           tags={tags}
+          topics={topics}
           className="sidebar-left-grid"
         />
 
