@@ -15,12 +15,19 @@ export default function TopicDetail() {
     getTopic(slug)
       .then((t) => {
         setTopic(t)
+        ;(window as any).__currentTopic = t
         if (t?.title) {
           document.title = `专栏: ${t.title} - Mango`
         }
       })
-      .catch(() => setTopic(null))
+      .catch(() => {
+        setTopic(null)
+        ;(window as any).__currentTopic = null
+      })
       .finally(() => setLoading(false))
+    return () => {
+      ;(window as any).__currentTopic = null
+    }
   }, [slug])
 
   if (loading) {

@@ -112,7 +112,7 @@ function mango_render_admin_page(): void {
 			$raw     = json_decode( wp_unslash( $_POST['mango_sidebar_widgets'] ), true );
 			$widgets = [];
 			if ( is_array( $raw ) ) {
-				$valid_types = [ 'profile', 'categories', 'tags', 'topics', 'wiki_tree', 'toc', 'about', 'site_info', 'site_stats', 'custom_html' ];
+				$valid_types = [ 'profile', 'categories', 'tags', 'topics', 'topic_posts', 'wiki_tree', 'toc', 'about', 'site_info', 'site_stats', 'custom_html' ];
 				$valid_pages = [ 'home', 'post', 'category', 'topic', 'topics', 'wiki', 'wiki_list', 'search', 'archive', 'page', 'links' ];
 				foreach ( $raw as $w ) {
 					$display_on = [];
@@ -1273,6 +1273,7 @@ function mango_render_admin_page(): void {
 						'categories'  => __( '分类列表', 'mango' ),
 						'tags'        => __( '标签云', 'mango' ),
 						'topics'      => __( '专栏列表', 'mango' ),
+						'topic_posts' => __( '专栏目录', 'mango' ),
 						'wiki_tree'   => __( 'Wiki 页面树', 'mango' ),
 						'toc'         => __( '文章目录', 'mango' ),
 						'about'       => __( '自定义文本', 'mango' ),
@@ -1281,7 +1282,7 @@ function mango_render_admin_page(): void {
 						'custom_html' => __( '自定义 HTML', 'mango' ),
 					];
 					$widget_type_needs_content = [ 'about', 'custom_html' ];
-					$widget_type_has_default_title = [ 'profile', 'categories', 'tags', 'topics', 'wiki_tree', 'toc', 'site_info', 'site_stats' ];
+					$widget_type_has_default_title = [ 'profile', 'categories', 'tags', 'topics', 'topic_posts', 'wiki_tree', 'toc', 'site_info', 'site_stats' ];
 					$page_types = [
 						'home'     => __( '首页', 'mango' ),
 						'post'     => __( '文章页', 'mango' ),

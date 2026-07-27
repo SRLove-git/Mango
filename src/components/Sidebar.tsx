@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useSiteData } from '../context/SiteDataContext'
 import { useArticleToc } from '../context/ArticleTocContext'
-import { getWikiProject } from '../api/wordpress'
+import { getWikiProject, type Topic } from '../api/wordpress'
 
 interface Props {
   side: 'left' | 'right'
@@ -31,6 +31,7 @@ const DEFAULT_TITLES: Record<string, string> = {
   categories: '分类',
   tags: '标签云',
   topics: '专栏',
+  topic_posts: '专栏目录',
   wiki_tree: 'Wiki 页面',
   toc: '文章目录',
   about: '关于',
@@ -219,6 +220,43 @@ export default function Sidebar({ side, className }: Props) {
                     <span>{t.title}</span>
                   </span>
                   <span className="count">{t.post_count}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )
+    }
+
+    // --- topic_posts (专栏文章目录) ---
+    if (w.type === 'topic_posts') {
+      const currentTopic = (window as any).__currentTopic as Topic | undefined
+      if (!currentTopic || !currentTopic.posts || currentTopic.posts.length === 0) return null
+
+      // 从 URL 判断当前文章 slug
+      const pathParts = location.pathname.split('/')
+      const currentPostSlug = pathParts.length >= 4 && pathParts[1] === 'topic' ? pathParts[4] || '' : ''
+
+      return (
+        <div className="glass topic-posts-widget" key={key}>
+          <h3 className="sidebar-title">
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {title}
+              <span className="pill-count" style={{ background: 'var(--glass)' }}>{currentTopic.posts.length}</span>
+            </span>
+          </h3>
+          <ul className="topic-posts-list">
+            {currentTopic.posts.map((post, index) => {
+              const isActive = post.slug === currentPostSlug
+              const postPath = `/topic/${currentTopic.id}/post/${post.slug}`
+              return (
+                <li
+                  key={post.id}
+                  className={`topic-posts-item ${isActive ? 'active' : ''}`}
+                  onClick={() => navigate(postPath)}
+                >
+                  <span className="topic-posts-index">{index + 1}</span>
+                  <span className="topic-posts-title">{post.title}</span>
                 </li>
               )
             })}

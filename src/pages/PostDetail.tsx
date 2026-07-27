@@ -90,13 +90,19 @@ export default function PostDetail() {
           setBannerTitle(p.title.rendered)
         }
         if (p?.meta?.topic) {
-          getTopic(p.meta.topic).then((t) => setTopic(t)).catch(() => {})
+          getTopic(p.meta.topic).then((t) => {
+            setTopic(t)
+            ;(window as any).__currentTopic = t
+          }).catch(() => {})
         }
       })
       .catch(() => setPost(null))
       .finally(() => setLoading(false))
-    // 离开文章页时清除壁纸标题
-    return () => setBannerTitle('')
+    // 离开文章页时清除壁纸标题和专栏数据
+    return () => {
+      setBannerTitle('')
+      ;(window as any).__currentTopic = null
+    }
   }, [postSlug, postId, setBannerTitle])
 
   // 文章内容渲染后通知 Sidebar 重新扫描标题

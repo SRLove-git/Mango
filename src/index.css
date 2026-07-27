@@ -4972,6 +4972,77 @@ body.sakura-disabled #sakura-canvas {
   box-shadow: 0 0 6px var(--accent-glow);
 }
 
+/* ---- Topic Posts Widget (专栏目录) ---- */
+.topic-posts-widget {
+  max-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.topic-posts-widget .sidebar-title {
+  flex-shrink: 0;
+}
+
+.topic-posts-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+}
+
+.topic-posts-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
+  margin: 1px 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all var(--transition);
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.topic-posts-item:hover {
+  background: var(--cat-pill-hover-bg);
+  color: var(--cat-pill-text, var(--text));
+}
+
+.topic-posts-item.active {
+  color: var(--accent);
+  font-weight: 600;
+  background: var(--accent-glow);
+}
+
+.topic-posts-index {
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
+.topic-posts-item.active .topic-posts-index {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.topic-posts-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---- Wiki Responsive ---- */
 @media (max-width: 900px) {
   .wiki-detail-layout {
