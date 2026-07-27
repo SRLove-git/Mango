@@ -258,7 +258,16 @@ export default function Layout() {
         <div className="navbar-inner">
           <div className="navbar-grid">
             {/* Logo */}
-            <Link to="/" className="navbar-logo">Mango</Link>
+            <Link to="/" className="navbar-logo">
+              {(window as any).MANGO_DATA?.siteLogo ? (
+                <img
+                  src={(window as any).MANGO_DATA.siteLogo}
+                  alt={(window as any).MANGO_DATA?.siteName || 'Mango'}
+                  className="navbar-logo-img"
+                />
+              ) : null}
+              {(window as any).MANGO_DATA?.siteName || 'Mango'}
+            </Link>
 
             {/* Desktop Nav Links */}
             <nav className="navbar-links">
@@ -423,7 +432,7 @@ export default function Layout() {
 
       {/* Footer */}
       <footer className="footer glass">
-        <span className="logo-text">Mango</span>
+        <span className="logo-text">{(window as any).MANGO_DATA?.siteName || 'Mango'}</span>
         {/* Social Links */}
         {(() => {
           const socialLinks = (window as any).MANGO_DATA?.socialLinks || {};

@@ -47,6 +47,7 @@ function mango_render_admin_page(): void {
 		// 基本设置（仅在基本设置字段存在时保存，避免被主题设置保存覆盖）
 		if ( isset( $_POST['mango_site_logo'] ) ) {
 			$basic = [
+				'site_name'        => sanitize_text_field( $_POST['mango_site_name'] ?? '' ),
 				'site_logo'        => esc_url_raw( $_POST['mango_site_logo'] ?? '' ),
 				'avatar_url'       => esc_url_raw( $_POST['mango_avatar_url'] ?? '' ),
 				'footer_text'      => sanitize_text_field( $_POST['mango_footer_text'] ?? '' ),
@@ -186,6 +187,7 @@ function mango_render_admin_page(): void {
 	$style             = get_theme_mod( 'mango_theme_style', 'anime' );
 	$card_radius       = get_theme_mod( 'mango_card_radius', 25 );
 	$basic             = get_option( 'mango_basic_settings', [] );
+	$site_name         = $basic['site_name'] ?? '';
 	$site_logo         = $basic['site_logo'] ?? '';
 	$avatar_url        = $basic['avatar_url'] ?? '';
 	$footer_text       = $basic['footer_text'] ?? '';
@@ -314,6 +316,15 @@ function mango_render_admin_page(): void {
 					<p class="description"><?php _e( '配置网站的基本信息。', 'mango' ); ?></p>
 
 					<table class="form-table">
+						<tr>
+							<th scope="row"><label for="mango_site_name"><?php _e( '站点名称', 'mango' ); ?></label></th>
+							<td>
+								<input type="text" id="mango_site_name" name="mango_site_name"
+									   value="<?php echo esc_attr( $site_name ); ?>" class="regular-text"
+									   placeholder="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
+								<p class="description"><?php _e( '显示在导航栏的网站名称，留空使用 WordPress 默认站点名称。', 'mango' ); ?></p>
+							</td>
+						</tr>
 						<tr>
 							<th scope="row"><label for="mango_site_logo"><?php _e( '站点 Logo URL', 'mango' ); ?></label></th>
 							<td>

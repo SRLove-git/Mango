@@ -95,11 +95,14 @@ function mango_enqueue_scripts(): void {
 
 	// 将 WordPress 数据传递给前端
 	wp_localize_script( 'mango-app', 'MANGO_DATA', [
-		'siteUrl'        => site_url(),
-		'apiUrl'         => esc_url_raw( rest_url( 'wp/v2' ) ),
-		'themeUri'       => get_template_directory_uri(),
-		'nonce'          => wp_create_nonce( 'wp_rest' ),
-		'randomImageApi' => esc_url_raw( $mango_basic['random_image_api'] ?? '' ),
+		'siteUrl'         => site_url(),
+		'apiUrl'          => esc_url_raw( rest_url( 'wp/v2' ) ),
+		'themeUri'        => get_template_directory_uri(),
+		'nonce'           => wp_create_nonce( 'wp_rest' ),
+		'siteName'        => ! empty( $mango_basic['site_name'] ) ? $mango_basic['site_name'] : get_bloginfo( 'name' ),
+		'siteDescription' => get_bloginfo( 'description' ),
+		'siteLogo'        => esc_url_raw( $mango_basic['site_logo'] ?? '' ),
+		'randomImageApi'  => esc_url_raw( $mango_basic['random_image_api'] ?? '' ),
 		'useRandomImage' => ( $mango_basic['use_random_image'] ?? '1' ) === '1',
 		'siteStartDate'  => $mango_basic['site_start_date'] ?? '',
 		'icpNumber'      => $mango_basic['icp_number'] ?? '',

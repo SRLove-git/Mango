@@ -656,6 +656,12 @@ img {
   transform: scale(0.95);
 }
 
+.navbar-logo-img {
+  height: 28px;
+  width: auto;
+  border-radius: 4px;
+}
+
 /* ---- Desktop Nav Links ---- */
 
 .navbar-links {
