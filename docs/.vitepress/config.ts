@@ -4,7 +4,7 @@ export default defineConfig({
   title: 'Mango',
   description: '一款基于 React + TypeScript + Vite 构建的 Headless SPA WordPress 博客主题',
   lang: 'zh-CN',
-  base: '/mango/',
+  base: '/Mango/',
 
   themeConfig: {
     nav: [
