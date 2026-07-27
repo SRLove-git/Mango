@@ -183,6 +183,79 @@ function mango_get_topic( WP_REST_Request $request ): WP_REST_Response {
 }
 
 /**
+ * 在文章编辑页添加专栏选择器 Meta Box
+ */
+function mango_add_topic_meta_box(): void {
+	add_meta_box(
+		'mango_topic_selector',
+		__( '所属专栏', 'mango' ),
+		'mango_render_topic_meta_box',
+		'post',
+		'side',
+		'default'
+	);
+}
+add_action( 'add_meta_boxes', 'mango_add_topic_meta_box' );
+
+/**
+ * 渲染专栏选择器 Meta Box
+ */
+function mango_render_topic_meta_box( WP_Post $post ): void {
+	$topics     = get_option( 'mango_topics', [] );
+	$current    = get_post_meta( $post->ID, 'topic', true );
+	wp_nonce_field( 'mango_topic_meta_box', 'mango_topic_meta_box_nonce' );
+	?>
+
+	<select name="mango_topic" id="mango_topic" style="width:100%;">
+		<option value=""><?php _e( '— 无 —', 'mango' ); ?></option>
+		<?php foreach ( $topics as $slug => $topic ): ?>
+			<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $current, $slug ); ?>>
+				<?php echo esc_html( $topic['title'] ?? $topic['name'] ?? $slug ); ?>
+			</option>
+		<?php endforeach; ?>
+	</select>
+
+	<?php if ( empty( $topics ) ): ?>
+		<p style="color:#94a3b8;font-size:12px;margin:8px 0 0;">
+			<?php _e( '暂无专栏，请先在「Mango 主题设置 → 专栏管理」中创建。', 'mango' ); ?>
+		</p>
+	<?php endif; ?>
+
+	<?php
+}
+
+/**
+ * 保存专栏选择器 Meta Box 数据
+ */
+function mango_save_topic_meta_box( int $post_id ): void {
+	// 自动保存跳过
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		return;
+	}
+
+	// 权限检查
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+
+	// nonce 验证
+	if ( ! isset( $_POST['mango_topic_meta_box_nonce'] ) ||
+		! wp_verify_nonce( $_POST['mango_topic_meta_box_nonce'], 'mango_topic_meta_box' ) ) {
+		return;
+	}
+
+	if ( isset( $_POST['mango_topic'] ) ) {
+		$topic = sanitize_text_field( $_POST['mango_topic'] );
+		if ( $topic === '' ) {
+			delete_post_meta( $post_id, 'topic' );
+		} else {
+			update_post_meta( $post_id, 'topic', $topic );
+		}
+	}
+}
+add_action( 'save_post', 'mango_save_topic_meta_box' );
+
+/**
  * 保存专栏数据（管理员接口）
  */
 function mango_save_topics( WP_REST_Request $request ): WP_REST_Response {

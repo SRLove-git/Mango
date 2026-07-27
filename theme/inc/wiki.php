@@ -9,6 +9,20 @@
  */
 
 /**
+ * 注册 wiki 项目文章元数据
+ */
+function mango_register_wiki_meta(): void {
+	register_post_meta( 'post', 'wiki_project', [
+		'show_in_rest'      => true,
+		'single'            => true,
+		'type'              => 'string',
+		'default'           => '',
+		'sanitize_callback' => 'sanitize_text_field',
+	] );
+}
+add_action( 'init', 'mango_register_wiki_meta' );
+
+/**
  * 注册 wiki REST API 路由
  */
 function mango_register_wiki_routes(): void {
@@ -201,6 +215,76 @@ function mango_build_wiki_tree( array $pages ): array {
 
 	return $roots;
 }
+
+/**
+ * 在文章编辑页添加 Wiki 项目选择器 Meta Box
+ */
+function mango_add_wiki_meta_box(): void {
+	add_meta_box(
+		'mango_wiki_selector',
+		__( '所属 Wiki', 'mango' ),
+		'mango_render_wiki_meta_box',
+		'post',
+		'side',
+		'default'
+	);
+}
+add_action( 'add_meta_boxes', 'mango_add_wiki_meta_box' );
+
+/**
+ * 渲染 Wiki 项目选择器 Meta Box
+ */
+function mango_render_wiki_meta_box( WP_Post $post ): void {
+	$wiki_data = get_option( 'mango_wiki', [] );
+	$current   = get_post_meta( $post->ID, 'wiki_project', true );
+	wp_nonce_field( 'mango_wiki_meta_box', 'mango_wiki_meta_box_nonce' );
+	?>
+
+	<select name="mango_wiki_project" id="mango_wiki_project" style="width:100%;">
+		<option value=""><?php _e( '— 无 —', 'mango' ); ?></option>
+		<?php foreach ( $wiki_data as $slug => $project ): ?>
+			<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $current, $slug ); ?>>
+				<?php echo esc_html( $project['title'] ?? $project['name'] ?? $slug ); ?>
+			</option>
+		<?php endforeach; ?>
+	</select>
+
+	<?php if ( empty( $wiki_data ) ): ?>
+		<p style="color:#94a3b8;font-size:12px;margin:8px 0 0;">
+			<?php _e( '暂无 Wiki 项目，请先在「Mango 主题设置 → Wiki 管理」中创建。', 'mango' ); ?>
+		</p>
+	<?php endif; ?>
+
+	<?php
+}
+
+/**
+ * 保存 Wiki 项目选择器 Meta Box 数据
+ */
+function mango_save_wiki_meta_box( int $post_id ): void {
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		return;
+	}
+
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+
+	if ( ! isset( $_POST['mango_wiki_meta_box_nonce'] ) ||
+		! wp_verify_nonce( $_POST['mango_wiki_meta_box_nonce'], 'mango_wiki_meta_box' ) ) {
+		return;
+	}
+
+	if ( isset( $_POST['mango_wiki_project'] ) ) {
+		$wiki_project = sanitize_text_field( $_POST['mango_wiki_project'] );
+		if ( $wiki_project === '' ) {
+			delete_post_meta( $post_id, 'wiki_project' );
+		} else {
+			update_post_meta( $post_id, 'wiki_project', $wiki_project );
+		}
+	}
+}
+add_action( 'save_post', 'mango_save_wiki_meta_box' );
 
 /**
  * 保存 wiki 项目数据（管理员接口）

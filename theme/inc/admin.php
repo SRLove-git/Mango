@@ -404,7 +404,7 @@ function mango_render_admin_page(): void {
 					<?php elseif ( $tab === 'topics' ): /* === 专栏管理选项卡 === */ ?>
 
 					<h2><?php _e( '专栏管理', 'mango' ); ?></h2>
-					<p class="description"><?php _e( '管理博客专栏。在文章编辑页面的「自定义字段」中添加 <code>topic</code> 键（值为专栏 ID）将文章关联到专栏。', 'mango' ); ?></p>
+					<p class="description"><?php _e( '管理博客专栏。编辑文章时在右侧「所属专栏」下拉框中选择即可将文章关联到专栏。', 'mango' ); ?></p>
 
 					<?php
 					$topics       = get_option( 'mango_topics', [] );
@@ -558,23 +558,26 @@ function mango_render_admin_page(): void {
 					</div>
 
 					<script>
-					jQuery(function($) {
-						var topics = <?php echo json_encode( $topics ); ?>;
-						var $newForm = $('#mango-topic-form-new');
+				jQuery(function($) {
+					var topics = <?php echo json_encode( is_array( $topics ) ? $topics : [] ); ?>;
+					var $newForm = $('#mango-topic-form-new');
 
-						// 新建专栏：显示/隐藏表单
-						$('.mango-btn-add-topic').on('click', function() {
-							$newForm.slideToggle(180);
-							// 收起所有内联编辑
-							$('.mango-topic-inline-edit:visible').slideUp(180);
-						});
-						$('.mango-btn-cancel-new-topic').on('click', function() {
-							$newForm.slideUp(180);
-							$newForm.find('input, textarea').val('');
-						});
+					// 新建专栏：显示/隐藏表单（委托事件）
+					$(document).on('click', '.mango-btn-add-topic', function(e) {
+						e.preventDefault();
+						$newForm.slideToggle(180);
+						// 收起所有内联编辑
+						$('.mango-topic-inline-edit:visible').slideUp(180);
+					});
+					$(document).on('click', '.mango-btn-cancel-new-topic', function(e) {
+						e.preventDefault();
+						$newForm.slideUp(180);
+						$newForm.find('input, textarea').val('');
+					});
 
-						// 保存新建专栏
-						$('.mango-btn-save-new-topic').on('click', function() {
+					// 保存新建专栏（委托事件）
+					$(document).on('click', '.mango-btn-save-new-topic', function(e) {
+						e.preventDefault();
 							var slug = $('#mango_new_topic_id').val().trim();
 							var name = $('#mango_new_topic_name').val().trim();
 
@@ -1560,12 +1563,12 @@ function mango_render_admin_page(): void {
 					<?php elseif ( $tab === 'wiki' ): /* === Wiki 管理选项卡 === */ ?>
 
 					<h2><?php _e( 'Wiki 管理', 'mango' ); ?></h2>
-					<p class="description"><?php _e( '管理 Wiki 知识库项目。每个项目包含一个页面树，用于展示项目文档或个人知识库。', 'mango' ); ?></p>
+					<p class="description"><?php _e( '管理 Wiki 知识库项目。每个项目包含一个页面树，用于展示项目文档或个人知识库。编辑文章时在右侧「所属 Wiki」下拉框中选择即可将文章关联到 Wiki 项目。', 'mango' ); ?></p>
 
 					<?php
 					$wiki_data = get_option( 'mango_wiki', [] );
 					?>
-					<script>var mangoWikiData = <?php echo json_encode( $wiki_data ); ?>;</script>
+					<script>var mangoWikiData = <?php echo json_encode( is_array( $wiki_data ) ? $wiki_data : [] ); ?>;</script>
 
 					<div id="mango-wiki-admin">
 						<!-- 工具栏 -->

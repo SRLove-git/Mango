@@ -13,6 +13,7 @@ import TopicDetail from './pages/TopicDetail'
 import WikiIndex from './pages/WikiIndex'
 import WikiDetail from './pages/WikiDetail'
 import Guestbook from './pages/Guestbook'
+import Tags from './pages/Tags'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/post/:slug" element={<PostDetail />} />
         <Route path="/category" element={<Categories />} />
         <Route path="/category/:slug" element={<Category />} />
+        <Route path="/tags" element={<Tags />} />
         <Route path="/search" element={<Search />} />
         <Route path="/links" element={<Links />} />
         <Route path="/topics" element={<Topics />} />

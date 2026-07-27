@@ -22,6 +22,7 @@ export default function CategoryBar({ categories, menuItems }: Props) {
   const isHome = pathname === '/'
   const isArchive = pathname === '/archives'
   const isCategories = pathname === '/category'
+  const isTags = pathname === '/tags'
 
   const currentCategory = pathname.startsWith('/category/')
     ? decodeURIComponent(pathname.replace('/category/', ''))
@@ -32,6 +33,7 @@ export default function CategoryBar({ categories, menuItems }: Props) {
     if (pillCategory === '__home__') return isHome
     if (pillCategory === '__archive__') return isArchive
     if (pillCategory === '__categories__') return isCategories
+    if (pillCategory === '__tags__') return isTags
     if (currentCategory) return pillCategory === currentCategory
     return false
   }
@@ -39,7 +41,7 @@ export default function CategoryBar({ categories, menuItems }: Props) {
   // 判断是否 soft-active（弱高亮 —— 文章页所属分类）
   function isSoftActive(pillCategory: string): boolean {
     if (!currentPostCategory) return false
-    if (isHome || currentCategory || isArchive || isCategories) return false
+    if (isHome || currentCategory || isArchive || isCategories || isTags) return false
     return pillCategory === currentPostCategory
   }
 
@@ -139,6 +141,14 @@ export default function CategoryBar({ categories, menuItems }: Props) {
         >
           归档
           <span className="pill-count">{totalPosts}</span>
+        </button>
+
+        {/* 标签 */}
+        <button
+          className={`category-pill tag-nav-pill${isTags ? ' active' : ''}`}
+          onClick={() => navigate('/tags')}
+        >
+          标签
         </button>
 
         <div className="category-divider" />
