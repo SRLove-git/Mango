@@ -25,6 +25,7 @@ export default function Layout() {
   const [scrolled, setScrolled] = useState(false)
   const [bannerLoaded, setBannerLoaded] = useState(false)
   const [expandedSubmenu, setExpandedSubmenu] = useState<number | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null)
   const wallpaperRef = useRef<HTMLDivElement>(null)
   const sidebarPosition = (window as any).MANGO_DATA?.layout?.sidebar_position || 'right'
   const bannerImage = (window as any).MANGO_DATA?.bannerImage || getRandomImageUrl('banner')
@@ -39,11 +40,31 @@ export default function Layout() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // 点击外部关闭子菜单
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (openDropdown !== null && !target.closest('.navbar-dropdown')) {
+        setOpenDropdown(null)
+      }
+    }
+    document.addEventListener('click', onDocClick)
+    return () => document.removeEventListener('click', onDocClick)
+  }, [openDropdown])
+
   // 获取子菜单项
   const getChildren = (parentId: number) =>
     menuItems
       .filter((item) => item.parent === parentId)
       .sort((a, b) => a.order - b.order)
+
+  // 标题解析 — 剥掉 [icon] 前缀，避免显示在菜单中
+  // 例: "[fire]我的" => "我的"
+  const parseTitle = (raw: string): { icon: string | null; label: string } => {
+    const m = raw.match(/^\[([^\]]+)\]\s*(.*)$/)
+    if (m) return { icon: m[1], label: m[2] }
+    return { icon: null, label: raw }
+  }
 
   // 桌面端导航链接渲染（含下拉菜单）
   const renderNavLink = (item: WPMenuItem) => {
@@ -53,37 +74,54 @@ export default function Layout() {
       : false
     const href = isInternal ? new URL(item.url).pathname : item.url
     const isActive = isInternal && location.pathname === href
+    const parentParsed = parseTitle(item.title)
 
     // 有子菜单 → 下拉菜单
     if (children.length > 0) {
+      const isOpen = openDropdown === item.id
+      const toggleOpen = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setOpenDropdown(isOpen ? null : item.id)
+      }
       return (
-        <div key={item.id} className="navbar-dropdown">
-          <button className="navbar-link dropdown-trigger">
-            {item.title}
+        <div
+          key={item.id}
+          className={`navbar-dropdown${isOpen ? ' open' : ''}`}
+          onMouseLeave={() => setOpenDropdown(null)}
+        >
+          <button className="navbar-link dropdown-trigger" onClick={toggleOpen}>
+            <span>{parentParsed.label}</span>
             <svg className="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
               <path d="M3 4.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
           <div className="dropdown-menu">
-            {children.map((child) => {
-              const childInternal = (window as any).MANGO_DATA?.siteUrl
-                ? child.url.startsWith((window as any).MANGO_DATA.siteUrl)
-                : false
-              const childHref = childInternal ? new URL(child.url).pathname : child.url
-              const childActive = childInternal && location.pathname === childHref
-              if (childInternal) {
-                return (
-                  <Link key={child.id} to={childHref} className={`dropdown-item${childActive ? ' active' : ''}`}>
-                    {child.title}
-                  </Link>
+            <div className="dropdown-menu-inner">
+              {children.map((child) => {
+                const childInternal = (window as any).MANGO_DATA?.siteUrl
+                  ? child.url.startsWith((window as any).MANGO_DATA.siteUrl)
+                  : false
+                const childHref = childInternal ? new URL(child.url).pathname : child.url
+                const childActive = childInternal && location.pathname === childHref
+                const childParsed = parseTitle(child.title)
+                const inner = (
+                  <span className="dropdown-item-label">{childParsed.label}</span>
                 )
-              }
-              return (
-                <a key={child.id} href={child.url} className="dropdown-item" target={child.target || '_blank'} rel={child.target ? undefined : 'noopener noreferrer'}>
-                  {child.title}
-                </a>
-              )
-            })}
+                if (childInternal) {
+                  return (
+                    <Link key={child.id} to={childHref} className={`dropdown-item${childActive ? ' active' : ''}`} onClick={() => setOpenDropdown(null)}>
+                      {inner}
+                    </Link>
+                  )
+                }
+                return (
+                  <a key={child.id} href={child.url} className="dropdown-item" target={child.target || '_blank'} rel={child.target ? undefined : 'noopener noreferrer'} onClick={() => setOpenDropdown(null)}>
+                    {inner}
+                  </a>
+                )
+              })}
+            </div>
           </div>
         </div>
       )
@@ -92,13 +130,13 @@ export default function Layout() {
     if (isInternal) {
       return (
         <Link key={item.id} to={href} className={`navbar-link${isActive ? ' active' : ''}`}>
-          {item.title}
+          <span>{parentParsed.label}</span>
         </Link>
       )
     }
     return (
       <a key={item.id} href={item.url} className="navbar-link" target={item.target || '_blank'} rel={item.target ? undefined : 'noopener noreferrer'}>
-        {item.title}
+        <span>{parentParsed.label}</span>
       </a>
     )
   }

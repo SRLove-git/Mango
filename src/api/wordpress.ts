@@ -381,4 +381,76 @@ export async function getWikiPage(project: string, slug: string): Promise<WikiPr
   }
 }
 
+/* =====================================================
+ * 评论系统 (Comments)
+ * ===================================================== */
+
+export interface WPComment {
+  id: number
+  post: number
+  parent: number
+  author_name: string
+  author_email: string
+  author_url: string
+  author_avatar_urls: Record<string, string>
+  date: string
+  content: { rendered: string }
+  link: string
+  type: string
+  status: string
+}
+
+export interface CommentSubmitData {
+  post: number
+  author_name: string
+  author_email: string
+  author_url?: string
+  content: string
+  parent?: number
+}
+
+/** 获取指定文章的评论列表 */
+export async function getComments(
+  postId: number,
+  page = 1,
+  perPage = 10
+): Promise<{ comments: WPComment[]; total: number; totalPages: number }> {
+  const { data, total, totalPages } = await fetchAPI<WPComment[]>('/comments', {
+    post: String(postId),
+    page: String(page),
+    per_page: String(perPage),
+    orderby: 'date_gmt',
+    order: 'asc',
+  })
+  return {
+    comments: Array.isArray(data) ? data : [],
+    total,
+    totalPages,
+  }
+}
+
+/** 提交评论 */
+export async function postComment(data: CommentSubmitData): Promise<{ comment: WPComment | null; status: string }> {
+  const url = `${API_URL}/comments`
+  const nonce = (window as any).MANGO_DATA?.nonce || ''
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WP-Nonce': nonce,
+      },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.message || '提交评论失败')
+    }
+    const comment: WPComment = await res.json()
+    return { comment, status: comment.status }
+  } catch (e) {
+    throw e
+  }
+}
+
 export type { WPCategory }

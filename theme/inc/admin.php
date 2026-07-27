@@ -59,7 +59,9 @@ function mango_render_admin_page(): void {
 				'random_image_api' => esc_url_raw( $_POST['mango_random_image_api'] ?? '' ),
 				'use_random_image' => isset( $_POST['mango_use_random_image'] ) ? '1' : '0',
 				'site_start_date'  => sanitize_text_field( $_POST['mango_site_start_date'] ?? '' ),
-				'icp_number'       => sanitize_text_field( $_POST['mango_icp_number'] ?? '' ),
+				'icp_number'        => sanitize_text_field( $_POST['mango_icp_number'] ?? '' ),
+				'waline_server_url' => esc_url_raw( $_POST['mango_waline_server_url'] ?? '' ),
+				'comment_system'    => in_array( $_POST['mango_comment_system'] ?? '', [ 'native', 'waline' ] ) ? $_POST['mango_comment_system'] : 'native',
 			];
 			update_option( 'mango_basic_settings', $basic );
 		}
@@ -228,8 +230,10 @@ function mango_render_admin_page(): void {
 	$footer_text       = $basic['footer_text'] ?? '';
 	$random_image_api  = $basic['random_image_api'] ?? '';
 	$use_random_image  = $basic['use_random_image'] ?? '1';
-	$site_start_date   = $basic['site_start_date'] ?? '';
-	$icp_number        = $basic['icp_number'] ?? '';
+	$site_start_date    = $basic['site_start_date'] ?? '';
+	$icp_number         = $basic['icp_number'] ?? '';
+	$waline_server_url  = $basic['waline_server_url'] ?? '';
+	$comment_system     = $basic['comment_system'] ?? 'native';
 
 	// 读取布局设置
 	$layout           = get_theme_mod( 'mango_layout_settings', [] );
@@ -410,6 +414,25 @@ function mango_render_admin_page(): void {
 									   value="<?php echo esc_attr( $icp_number ); ?>" class="regular-text"
 									   placeholder="<?php _e( '京ICP备XXXXXXXX号', 'mango' ); ?>">
 								<p class="description"><?php _e( '填入备案号后将在前端页脚显示。', 'mango' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php _e( '评论系统', 'mango' ); ?></th>
+							<td>
+								<select name="mango_comment_system" id="mango_comment_system">
+									<option value="native" <?php selected( $comment_system, 'native' ); ?>><?php _e( 'WordPress 原生评论', 'mango' ); ?></option>
+									<option value="waline" <?php selected( $comment_system, 'waline' ); ?>><?php _e( 'Waline 评论', 'mango' ); ?></option>
+								</select>
+								<p class="description"><?php _e( '选择留言页面使用的评论系统。选择 Waline 时需在下方填写 Waline 服务器地址。', 'mango' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="mango_waline_server_url"><?php _e( 'Waline 服务器地址', 'mango' ); ?></label></th>
+							<td>
+								<input type="url" id="mango_waline_server_url" name="mango_waline_server_url"
+									   value="<?php echo esc_attr( $waline_server_url ); ?>" class="regular-text"
+									   placeholder="https://your-waline-server.vercel.app">
+								<p class="description"><?php _e( 'Waline 评论系统的服务端地址。需要自行部署 Waline 服务端，留空则不启用留言评论功能。', 'mango' ); ?></p>
 							</td>
 						</tr>
 					</table>

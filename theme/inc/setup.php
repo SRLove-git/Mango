@@ -137,6 +137,8 @@ function mango_enqueue_scripts(): void {
 			'mobileHidden'  => $mango_live2d['mobile_hidden'] ?? '1',
 			'cdnUrl'        => $mango_live2d['cdn_url'] ?? '',
 		],
+		'walineServerUrl' => $mango_basic['waline_server_url'] ?? '',
+		'commentSystem'   => $mango_basic['comment_system'] ?? 'native',
 	] );
 }
 add_action( 'wp_enqueue_scripts', 'mango_enqueue_scripts' );
@@ -207,6 +209,7 @@ function mango_add_spa_rewrite_rules(): void {
 		'wiki/([^/]+)/([^/]+)/?$',
 		'wiki/([^/]+)/?$',
 		'wiki/?$',
+		'guestbook/?$',
 	];
 
 	foreach ( $routes as $route ) {
@@ -236,7 +239,7 @@ add_action( 'init', 'mango_flush_on_routes_update' );
  * 例如访问 /post/slug 时 WordPress 不会将其重定向到 /archives/123.html。
  */
 function mango_disable_spa_redirect( $redirect_url, $requested_url ) {
-	$spa_prefixes = [ '/post/', '/topic/', '/archives', '/page/', '/category/', '/search', '/links', '/topics', '/wiki/' ];
+	$spa_prefixes = [ '/post/', '/topic/', '/archives', '/page/', '/category/', '/search', '/links', '/topics', '/wiki/', '/guestbook' ];
 
 	$url_path = wp_parse_url( $requested_url, PHP_URL_PATH );
 

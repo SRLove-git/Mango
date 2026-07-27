@@ -12,6 +12,7 @@ import Topics from './pages/Topics'
 import TopicDetail from './pages/TopicDetail'
 import WikiIndex from './pages/WikiIndex'
 import WikiDetail from './pages/WikiDetail'
+import Guestbook from './pages/Guestbook'
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/wiki" element={<WikiIndex />} />
         <Route path="/wiki/:project/:slug" element={<WikiDetail />} />
         <Route path="/wiki/:project" element={<WikiDetail />} />
+        <Route path="/guestbook" element={<Guestbook />} />
       </Route>
     </Routes>
   )
