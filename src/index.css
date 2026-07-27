@@ -495,7 +495,7 @@ img {
 
 #navbar > .navbar-inner {
   width: calc(100% - 32px);
-  max-width: calc(1360px - 32px);
+  max-width: max(calc(1360px - 32px), calc(100% - 32px));
   margin: 0 auto;
   height: 82px;
   padding: 0 calc(16px - 1px);
@@ -564,16 +564,16 @@ img {
 @media (min-width: 768px) {
   #navbar > .navbar-inner {
     width: calc(100% - 40px);
-    max-width: calc(1360px - 40px);
+    max-width: max(calc(1360px - 40px), calc(100% - 40px));
     padding: 0 calc(20px - 1px);
   }
 }
 
 @media (min-width: 1600px) {
   #navbar > .navbar-inner {
-    width: calc(100% - 128px);
-    max-width: calc(1360px - 128px);
-    padding: 0 calc(64px - 1px);
+    width: calc(100% - 64px);
+    max-width: max(calc(1360px - 64px), calc(100% - 64px));
+    padding: 0 calc(32px - 1px);
   }
 }
 
@@ -1141,7 +1141,7 @@ img {
 
 .main-grid {
   width: 100%;
-  max-width: 1360px;
+  max-width: max(1360px, calc(100% - 64px));
   margin: -80px auto 0;
   display: grid;
   grid-template-columns: 1fr;
@@ -1152,17 +1152,17 @@ img {
 }
 
 .main-grid--no-sidebar {
-  max-width: 960px;
+  max-width: max(960px, calc(100% - 120px));
 }
 
 /* 单左布局 — 左侧栏 + 内容 */
 .main-grid--left {
-  max-width: 1200px;
+  max-width: max(1200px, calc(100% - 80px));
 }
 
 /* 单右布局 — 内容 + 右侧栏 */
 .main-grid--right {
-  max-width: 1200px;
+  max-width: max(1200px, calc(100% - 80px));
 }
 
 /* 双栏布局（默认） */
@@ -1203,23 +1203,34 @@ img {
   .main-grid {
     grid-template-columns: 300px 1fr 340px;
     gap: 36px;
-    padding: 20px 64px;
+    padding: 20px 32px;
   }
   .main-grid--left {
     grid-template-columns: 300px 1fr;
     gap: 36px;
-    padding: 20px 64px;
+    padding: 20px 32px;
   }
   .main-grid--right {
     grid-template-columns: 1fr 340px;
     gap: 36px;
-    padding: 20px 64px;
+    padding: 20px 32px;
   }
 }
 
 @media (min-width: 1600px) {
   .header {
     max-width: calc(100% - 80px);
+  }
+}
+
+/* 超宽屏：进一步缩紧 padding */
+@media (min-width: 2560px) {
+  .main-grid {
+    padding: 20px 16px;
+  }
+  .main-grid--left,
+  .main-grid--right {
+    padding: 20px 16px;
   }
 }
 
