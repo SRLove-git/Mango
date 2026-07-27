@@ -5,6 +5,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import TurndownService from 'turndown'
 import 'katex/dist/katex.min.css'
 import type { Components } from 'react-markdown'
 
@@ -141,7 +142,7 @@ const components: Components = {
   img: ({ src, alt, ...props }) => (
     <img src={src} alt={alt || ''} loading="lazy" {...props} />
   ),
-  // macOS 风格代码块 + 语法高亮
+  // macOS 风格代码块 + 语法高亮（统一 markdown 和 WordPress 代码块样式）
   pre: ({ children, ...props }) => {
     let lang = ''
     let code = ''
@@ -155,10 +156,15 @@ const components: Components = {
       code = extractText(el.props.children)
     }
 
-    if (!lang) return <pre {...props}>{children}</pre>
+    if (code) return <CodeBlockMac lang={lang} code={code} />
 
-    return <CodeBlockMac lang={lang} code={code} />
+    return <pre {...props}>{children}</pre>
   },
+  table: ({ children, ...props }) => (
+    <div className="table-wrapper">
+      <table {...props}>{children}</table>
+    </div>
+  ),
   h1: createHeading(1),
   h2: createHeading(2),
   h3: createHeading(3),
@@ -169,63 +175,173 @@ const components: Components = {
 
 // ───────── WordPress HTML → markdown 转换 ─────────
 
-function htmlToText(html: string): string {
-  if (typeof document === 'undefined') return html
-  const div = document.createElement('div')
-  div.innerHTML = html
+/** 懒初始化 turndown 实例，复用避免重复创建 */
+let _td: TurndownService | null = null
+function getTurndown(): TurndownService {
+  if (!_td) {
+    _td = new TurndownService({
+      headingStyle: 'atx',
+      codeBlockStyle: 'fenced',
+      emDelimiter: '*',
+      bulletListMarker: '-',
+    })
 
-  div.querySelectorAll('br').forEach((br) => {
-    br.replaceWith('\n')
-  })
+    // 移除 turndown 内置的 table blankRule，替换为自定义表格转换
+    _td.remove('table')
 
-  // 处理列表项：<li> → "- 内容\n"
-  div.querySelectorAll('li').forEach((li) => {
-    const isOrdered = li.closest('ol') !== null
-    li.before(isOrdered ? '1. ' : '- ')
-    li.after('\n')
-    li.replaceWith(...Array.from(li.childNodes))
-  })
+    // 自定义表格规则：将 <table> 转换为 GFM 表格 markdown
+    _td.addRule('table', {
+      filter: 'table',
+      replacement: (_content, node) => {
+        const table = node as HTMLTableElement
+        let md = ''
+        let headerDone = false
+        let rowIndex = 0
 
-  // 处理 <ul>/<ol>：前后加空行分隔
-  div.querySelectorAll('ul, ol').forEach((list) => {
-    list.before('\n')
-    list.after('\n')
-    list.replaceWith(...Array.from(list.childNodes))
-  })
+        table.querySelectorAll('tr').forEach((row) => {
+          const cells = Array.from(row.querySelectorAll('th, td'))
+            .map((cell) => (cell.textContent || '').trim())
 
-  const blockSelectors = 'p, div, h1, h2, h3, h4, h5, h6, tr, blockquote, pre, hr'
-  div.querySelectorAll(blockSelectors).forEach((el) => {
-    el.after('\n\n')
-    el.replaceWith(...Array.from(el.childNodes))
-  })
+          if (cells.length === 0) return
 
-  return div.textContent || ''
+          md += '| ' + cells.join(' | ') + ' |\n'
+
+          if (!headerDone) {
+            const isHeaderRow = row.closest('thead') !== null || row.querySelector('th') !== null
+            if (isHeaderRow || rowIndex === 0) {
+              md += '| ' + cells.map(() => '---').join(' | ') + ' |\n'
+              headerDone = true
+            }
+          }
+          rowIndex++
+        })
+
+        return '\n\n' + md + '\n'
+      },
+    })
+
+    // 确保图片被正确转换为 ![](url)
+    _td.addRule('img', {
+      filter: 'img',
+      replacement: (_content, node) => {
+        const el = node as HTMLImageElement
+        const alt = el.getAttribute('alt') || ''
+        const src = el.getAttribute('src') || ''
+        return src ? `![${alt}](${src})` : ''
+      },
+    })
+    // 处理 Gutenberg 的 figure 包裹（图片/表格等）
+    _td.addRule('figure', {
+      filter: 'figure',
+      replacement: (content) => content,
+    })
+    // 处理 <br> 标签
+    _td.addRule('br', {
+      filter: 'br',
+      replacement: () => '\n',
+    })
+  }
+  return _td
 }
 
-function fixWpTexturize(text: string): string {
-  const SMART_LQUOTE = '\u201c'
-  const SMART_RQUOTE = '\u201d'
+// ───────── 数学块保护（防止 turndown 转义 LaTeX 字符）─────────
 
-  let result = text.replace(
-    new RegExp(`[${SMART_LQUOTE}${SMART_RQUOTE}]\`(\\w*)`, 'g'),
-    (_match, lang) => (lang ? `\`\`\`${lang}` : '\`\`\`')
-  )
+/**
+ * 将 WordPress 的 MathML 块（.wp-block-math）转为标准 LaTeX 分隔符。
+ * WordPress 输出的格式：
+ *   <div class="wp-block-math"><math display="block"><annotation encoding="application/x-tex">\sqrt{e}</annotation></math></div>
+ */
+function convertMathML(html: string): string {
+  if (typeof document === 'undefined') return html
+  const container = document.createElement('div')
+  container.innerHTML = html
 
-  result = result
+  container.querySelectorAll('.wp-block-math').forEach((el) => {
+    const annotation = el.querySelector('annotation[encoding="application/x-tex"]')
+    if (!annotation) return
+
+    const tex = (annotation.textContent || '').trim()
+    if (!tex) return
+
+    const mathEl = el.querySelector('math')
+    const isBlock = mathEl?.getAttribute('display') !== 'inline'
+
+    // 替换为 $$...$$（块级）或 $...$（行内）
+    const replacement = isBlock ? `$$${tex}$$` : `$${tex}$`
+    el.parentNode?.replaceChild(document.createTextNode(replacement), el)
+  })
+
+  return container.innerHTML
+}
+
+function protectMath(html: string): { html: string; mathBlocks: string[] } {
+  const blocks: string[] = []
+
+  let result = html
+    // 先处理 $$...$$（多行），再处理 $...$（单行），避免 $$ 被 $ 误匹配
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+      blocks.push('$$' + math + '$$')
+      return `ZZMATH${blocks.length - 1}ZZ`
+    })
+    .replace(/\$([^$\n]+?)\$/g, (_, math) => {
+      blocks.push('$' + math + '$')
+      return `ZZMATH${blocks.length - 1}ZZ`
+    })
+    // WordPress 可能使用 \(...\) 和 \[...\] 作为 LaTeX 分隔符
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => {
+      blocks.push('$$' + math + '$$')
+      return `ZZMATH${blocks.length - 1}ZZ`
+    })
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => {
+      blocks.push('$' + math + '$')
+      return `ZZMATH${blocks.length - 1}ZZ`
+    })
+
+  return { html: result, mathBlocks: blocks }
+}
+
+function restoreMath(md: string, blocks: string[]): string {
+  let result = md
+  blocks.forEach((math, i) => {
+    result = result.replace(`ZZMATH${i}ZZ`, math)
+  })
+  return result
+}
+
+function htmlToMarkdown(html: string): string {
+  // 0. 将 WordPress MathML 块转为 $$...$$ / $...$ 格式
+  const htmlWithMath = convertMathML(html)
+
+  // 1. 保护数学块，防止 turndown 转义 LaTeX 中的 _ \ 等字符
+  const { html: protectedHtml, mathBlocks } = protectMath(htmlWithMath)
+
+  // 2. turndown 处理
+  const td = getTurndown()
+  let md = td.turndown(protectedHtml)
+
+  // 3. 还原数学块
+  md = restoreMath(md, mathBlocks)
+
+  // 修复 WordPress texturize 产生的智能引号
+  md = md
     .replace(/\u2018/g, "'")
     .replace(/\u2019/g, "'")
     .replace(/\u201c/g, '"')
     .replace(/\u201d/g, '"')
+    .replace(/\u2026/g, '...')
+    // em dash → --
+    .replace(/\u2014/g, '--')
+    // en dash → -
+    .replace(/\u2013/g, '-')
+    // turndown 会转义反引号 ` → \`，需先还原才能用正则匹配代码围栏
+    .replace(/\\(`)/g, '$1')
+    // 还原被 turndown 转义的 markdown 行首标记（标题、列表等）
+    .replace(/^\\(#{1,6}\s)/gm, '$1')
+    .replace(/^\\([-*+>]\s)/gm, '$1')
+    // WordPress texturize 把 ```lang 转成 "`lang（只剩一个反引号），还原为代码围栏
+    .replace(/^"`(\w*)/gm, (_, lang) => '```' + lang)
 
-  result = result.replace(/\u2026/g, '...')
-
-  // WordPress 把用户输入的连字符 "---" 和 "--" 转成短破折号/长破折号
-  // 把 –（en dash U+2013, &#8211;）转回普通连字符，以便 markdown 列表识别
-  result = result.replace(/\u2013/g, '-')
-  // 把 —（em dash U+2014, &#8212;）转回 --
-  result = result.replace(/\u2014/g, '--')
-
-  return result
+  return md
 }
 
 function containsHTML(text: string): boolean {
@@ -237,8 +353,7 @@ export default function MarkdownRenderer({ content, className = '', mode = 'auto
     if (!content) return ''
 
     if (mode === 'html' || (mode === 'auto' && containsHTML(content))) {
-      const text = htmlToText(content)
-      return fixWpTexturize(text)
+      return htmlToMarkdown(content)
     }
 
     return content
@@ -247,7 +362,7 @@ export default function MarkdownRenderer({ content, className = '', mode = 'auto
   return (
     <div className={`detail-content ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
+        remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
         rehypePlugins={[rehypeKatex]}
         components={components}
       >

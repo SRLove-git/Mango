@@ -2997,31 +2997,39 @@ body.sakura-disabled #sakura-canvas {
   margin-bottom: 0;
 }
 
+.detail-content .table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1.5em 0;
+  border-radius: var(--radius-sm);
+}
+
 .detail-content table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin: 1.5em 0;
+  border-collapse: collapse;
   font-size: 14px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  margin: 0;
+  table-layout: auto;
 }
 
 .detail-content th,
 .detail-content td {
   padding: 11px 16px;
-  border: none;
   text-align: left;
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  word-break: break-word;
 }
 
 .detail-content th {
   background: var(--glass);
   font-weight: 600;
   color: var(--text);
+  white-space: nowrap;
+  border-bottom-width: 2px;
 }
-.detail-content tr:last-child td {
-  border-bottom: none;
+
+.detail-content td {
+  /* 允许换行，自然自适应 */
 }
 
 .detail-meta {

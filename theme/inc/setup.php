@@ -183,6 +183,24 @@ function mango_add_module_type( string $tag, string $handle, string $src ): stri
 add_filter( 'script_loader_tag', 'mango_add_module_type', 10, 3 );
 
 /**
+ * 为 Gutenberg 代码块添加 language-xxx CSS 类，
+ * 使前端 turndown → react-markdown 管线能正确提取语言标识并启用语法高亮
+ */
+function mango_code_block_add_lang_class( string $block_content, array $block ): string {
+	if ( $block['blockName'] === 'core/code' && ! empty( $block['attrs']['language'] ) ) {
+		$lang = $block['attrs']['language'];
+		// 在 <code> 上添加 language-xxx 类（turndown 通过此类识别语言）
+		$block_content = str_replace(
+			'<code>',
+			'<code class="language-' . esc_attr( $lang ) . '">',
+			$block_content
+		);
+	}
+	return $block_content;
+}
+add_filter( 'render_block', 'mango_code_block_add_lang_class', 10, 2 );
+
+/**
  * 移除不必要的 WordPress 头部输出（SPA 不需要）
  */
 remove_action( 'wp_head', 'wp_generator' );
