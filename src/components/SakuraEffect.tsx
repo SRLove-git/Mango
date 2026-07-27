@@ -113,6 +113,7 @@ export default function SakuraEffect() {
 
   return (
     <canvas
+      id="sakura-canvas"
       ref={canvasRef}
       style={{
         position: 'fixed',

@@ -17,6 +17,9 @@ const STORAGE = {
   sakura: 'mango_sakura',
   hue: 'mango_hue',
   hueDefault: 'mango_hue_default',
+  overlayOpacity: 'mango_overlay_opacity',
+  overlayBlur: 'mango_overlay_blur',
+  cardTransparent: 'mango_card_transparent',
 }
 
 const DEFAULTS = {
@@ -77,10 +80,17 @@ export default function WallpaperSettings() {
   const [gradient, setGradient] = useState(DEFAULTS.gradient)
   const [sakura, setSakura] = useState(DEFAULTS.sakura)
   const [hue, setHue] = useState(DEFAULTS.hue)
+  const [overlayOpacity, setOverlayOpacity] = useState(0.8)
+  const [overlayBlur, setOverlayBlur] = useState(0)
+  const [cardTransparent, setCardTransparent] = useState(0.45)
   const panelRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const hueTrackRef = useRef<HTMLDivElement>(null)
+  const overlayOpacityTrackRef = useRef<HTMLDivElement>(null)
+  const overlayBlurTrackRef = useRef<HTMLDivElement>(null)
+  const cardTransparentTrackRef = useRef<HTMLDivElement>(null)
   const hueDraggingRef = useRef(false)
+  const sliderDraggingRef = useRef<string | null>(null)
 
   // 初始化: 从 localStorage 读取并应用
   useEffect(() => {
@@ -91,6 +101,9 @@ export default function WallpaperSettings() {
     const g = getStored<boolean>(STORAGE.gradient, DEFAULTS.gradient)
     const s = getStored<boolean>(STORAGE.sakura, DEFAULTS.sakura)
     const h = getStored<number>(STORAGE.hue, DEFAULTS.hue)
+    const oo = getStored<number>(STORAGE.overlayOpacity, 0.8)
+    const ob = getStored<number>(STORAGE.overlayBlur, 0)
+    const ct = getStored<number>(STORAGE.cardTransparent, 0.45)
     setMode(m)
     setBannerTitle(bt)
     setBannerCarousel(bc)
@@ -98,6 +111,9 @@ export default function WallpaperSettings() {
     setGradient(g)
     setSakura(s)
     setHue(h)
+    setOverlayOpacity(oo)
+    setOverlayBlur(ob)
+    setCardTransparent(ct)
     applyWallpaperMode(m)
     applyToggle('bannerTitle', bt)
     applyToggle('bannerCarousel', bc)
@@ -105,6 +121,9 @@ export default function WallpaperSettings() {
     applyToggle('gradient', g)
     applyToggle('sakura', s)
     document.body.style.setProperty('--hue', String(h), 'important')
+    document.body.style.setProperty('--overlay-opacity', String(oo))
+    document.body.style.setProperty('--overlay-blur', String(ob) + 'px')
+    document.body.style.setProperty('--card-transparent-opacity', String(ct))
   }, [])
 
   // 色相值变化时同步 CSS 变量和 localStorage
@@ -195,6 +214,25 @@ export default function WallpaperSettings() {
     })
   }, [])
 
+  // ---------- 透明模式滑块处理 ----------
+  const handleOverlayOpacity = useCallback((value: number) => {
+    setOverlayOpacity(value)
+    setStored(STORAGE.overlayOpacity, value)
+    document.body.style.setProperty('--overlay-opacity', String(value))
+  }, [])
+
+  const handleOverlayBlur = useCallback((value: number) => {
+    setOverlayBlur(value)
+    setStored(STORAGE.overlayBlur, value)
+    document.body.style.setProperty('--overlay-blur', String(value) + 'px')
+  }, [])
+
+  const handleCardTransparent = useCallback((value: number) => {
+    setCardTransparent(value)
+    setStored(STORAGE.cardTransparent, value)
+    document.body.style.setProperty('--card-transparent-opacity', String(value))
+  }, [])
+
   // 自定义滑块: 根据 clientX 计算色相值
   const updateHueFromEvent = useCallback((clientX: number) => {
     const el = hueTrackRef.current
@@ -208,15 +246,41 @@ export default function WallpaperSettings() {
     setHue(Math.max(0, Math.min(360, newHue)))
   }, [])
 
-  // 文档级 mouseup 清理
+  // 通用滑块值计算
+  const sliderValueFromEvent = useCallback((clientX: number, el: HTMLDivElement, min: number, max: number, step: number, decimals: number) => {
+    const rect = el.getBoundingClientRect()
+    let x = clientX - rect.left
+    x = Math.max(0, Math.min(rect.width, x))
+    const ratio = x / rect.width
+    const stepped = Math.round((ratio * (max - min)) / step) * step + min
+    return parseFloat(Math.max(min, Math.min(max, stepped)).toFixed(decimals))
+  }, [])
+
+  // 文档级 mouseup / mousemove — 处理色相 & 滑块拖动
   useEffect(() => {
     const onUp = () => {
       hueDraggingRef.current = false
+      sliderDraggingRef.current = null
     }
     const onMove = (e: MouseEvent) => {
-      if (!hueDraggingRef.current) return
+      if (hueDraggingRef.current) {
+        e.preventDefault()
+        updateHueFromEvent(e.clientX)
+        return
+      }
+      const sliderId = sliderDraggingRef.current
+      if (!sliderId) return
       e.preventDefault()
-      updateHueFromEvent(e.clientX)
+      if (sliderId === 'overlayOpacity' && overlayOpacityTrackRef.current) {
+        const v = sliderValueFromEvent(e.clientX, overlayOpacityTrackRef.current, 0.1, 1, 0.05, 2)
+        handleOverlayOpacity(v)
+      } else if (sliderId === 'overlayBlur' && overlayBlurTrackRef.current) {
+        const v = sliderValueFromEvent(e.clientX, overlayBlurTrackRef.current, 0, 20, 1, 0)
+        handleOverlayBlur(Math.round(v))
+      } else if (sliderId === 'cardTransparent' && cardTransparentTrackRef.current) {
+        const v = sliderValueFromEvent(e.clientX, cardTransparentTrackRef.current, 0.1, 0.9, 0.05, 2)
+        handleCardTransparent(v)
+      }
     }
     document.addEventListener('mouseup', onUp)
     document.addEventListener('mousemove', onMove)
@@ -224,11 +288,29 @@ export default function WallpaperSettings() {
       document.removeEventListener('mouseup', onUp)
       document.removeEventListener('mousemove', onMove)
     }
-  }, [updateHueFromEvent])
+  }, [updateHueFromEvent, handleOverlayOpacity, handleOverlayBlur, handleCardTransparent, sliderValueFromEvent])
 
   const handleHueTrackMouseDown = (e: React.MouseEvent) => {
     hueDraggingRef.current = true
     updateHueFromEvent(e.clientX)
+  }
+
+  const handleOverlayOpacityMouseDown = (e: React.MouseEvent) => {
+    sliderDraggingRef.current = 'overlayOpacity'
+    const v = sliderValueFromEvent(e.clientX, overlayOpacityTrackRef.current!, 0.1, 1, 0.05, 2)
+    handleOverlayOpacity(v)
+  }
+
+  const handleOverlayBlurMouseDown = (e: React.MouseEvent) => {
+    sliderDraggingRef.current = 'overlayBlur'
+    const v = sliderValueFromEvent(e.clientX, overlayBlurTrackRef.current!, 0, 20, 1, 0)
+    handleOverlayBlur(Math.round(v))
+  }
+
+  const handleCardTransparentMouseDown = (e: React.MouseEvent) => {
+    sliderDraggingRef.current = 'cardTransparent'
+    const v = sliderValueFromEvent(e.clientX, cardTransparentTrackRef.current!, 0.1, 0.9, 0.05, 2)
+    handleCardTransparent(v)
   }
 
   // 动态计算箭头偏移量 — 自适应不同缩放/屏幕宽度
@@ -479,14 +561,71 @@ export default function WallpaperSettings() {
 
               {/* 全屏透明模式设置 */}
               {mode === 'overlay' && (
-                <div className="wallpaper-settings-section">
-                  <div className="wallpaper-section-title">
-                    <span className="wallpaper-section-marker" />
-                    <span className="wallpaper-section-label">透明设置</span>
+                <>
+                  <div className="wallpaper-settings-section">
+                    <div className="wallpaper-section-title">
+                      <span className="wallpaper-section-marker" />
+                      <span className="wallpaper-section-label">壁纸透明度</span>
+                      <span className="wallpaper-section-value">{Math.round(overlayOpacity * 100)}%</span>
+                    </div>
+                    <div className="wallpaper-section-divider" />
+                    <div
+                      className="wallpaper-hue-track overlay-slider-track"
+                      ref={overlayOpacityTrackRef}
+                      onMouseDown={handleOverlayOpacityMouseDown}
+                      style={{
+                        backgroundImage: `linear-gradient(90deg, var(--primary) 0 ${((overlayOpacity - 0.1) / 0.9) * 100}%, hsla(var(--hue), 22%, 28%, 0.18) ${((overlayOpacity - 0.1) / 0.9) * 100}% 100%)`,
+                      }}
+                    >
+                      <div
+                        className="wallpaper-hue-thumb"
+                        style={{ left: `${((overlayOpacity - 0.1) / 0.9) * 100}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="wallpaper-section-divider" />
-                  <p className="wallpaper-hint">全屏透明模式：壁纸作为背景层，主内容区透明显现。</p>
-                </div>
+                  <div className="wallpaper-settings-section">
+                    <div className="wallpaper-section-title">
+                      <span className="wallpaper-section-marker" />
+                      <span className="wallpaper-section-label">背景模糊度</span>
+                      <span className="wallpaper-section-value">{overlayBlur}px</span>
+                    </div>
+                    <div className="wallpaper-section-divider" />
+                    <div
+                      className="wallpaper-hue-track overlay-slider-track"
+                      ref={overlayBlurTrackRef}
+                      onMouseDown={handleOverlayBlurMouseDown}
+                      style={{
+                        backgroundImage: `linear-gradient(90deg, var(--primary) 0 ${(overlayBlur / 20) * 100}%, hsla(var(--hue), 22%, 28%, 0.18) ${(overlayBlur / 20) * 100}% 100%)`,
+                      }}
+                    >
+                      <div
+                        className="wallpaper-hue-thumb"
+                        style={{ left: `${(overlayBlur / 20) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="wallpaper-settings-section">
+                    <div className="wallpaper-section-title">
+                      <span className="wallpaper-section-marker" />
+                      <span className="wallpaper-section-label">卡片透明度</span>
+                      <span className="wallpaper-section-value">{Math.round(cardTransparent * 100)}%</span>
+                    </div>
+                    <div className="wallpaper-section-divider" />
+                    <div
+                      className="wallpaper-hue-track overlay-slider-track"
+                      ref={cardTransparentTrackRef}
+                      onMouseDown={handleCardTransparentMouseDown}
+                      style={{
+                        backgroundImage: `linear-gradient(90deg, var(--primary) 0 ${((cardTransparent - 0.1) / 0.8) * 100}%, hsla(var(--hue), 22%, 28%, 0.18) ${((cardTransparent - 0.1) / 0.8) * 100}% 100%)`,
+                      }}
+                    >
+                      <div
+                        className="wallpaper-hue-thumb"
+                        style={{ left: `${((cardTransparent - 0.1) / 0.8) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* 纯色模式提示 */}

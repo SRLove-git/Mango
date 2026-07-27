@@ -22,19 +22,13 @@ function mango_add_admin_menu(): void {
 add_action( 'admin_menu', 'mango_add_admin_menu' );
 
 /**
- * 加载管理页面所需的资源（颜色选择器）
+ * 加载管理页面所需的资源
  */
 function mango_admin_enqueue_assets( string $hook ): void {
 	if ( $hook !== 'toplevel_page_mango-settings' ) {
 		return;
 	}
-	wp_enqueue_style( 'wp-color-picker' );
-	wp_enqueue_script( 'wp-color-picker' );
-	wp_add_inline_script( 'wp-color-picker', '
-		jQuery(function($){
-			$(".mango-color-picker").wpColorPicker();
-		});
-	' );
+	// No additional assets needed
 }
 add_action( 'admin_enqueue_scripts', 'mango_admin_enqueue_assets' );
 
@@ -66,51 +60,16 @@ function mango_render_admin_page(): void {
 			update_option( 'mango_basic_settings', $basic );
 		}
 
-		// 处理自定义配色方案
-		$schemes = get_option( 'mango_color_schemes', [] );
-		$changed = false;
-
-		// 删除方案
-		if ( ! empty( $_POST['mango_delete_scheme'] ) ) {
-			$delete_id = sanitize_text_field( $_POST['mango_delete_scheme'] );
-			$schemes   = array_values( array_filter( $schemes, function ( $s ) use ( $delete_id ) {
-				return $s['id'] !== $delete_id;
-			} ) );
-			$changed   = true;
-		}
-
-		// 添加新方案
-		if ( ! empty( $_POST['mango_new_scheme_name'] ) ) {
-			$new_scheme = [
-				'id'   => 'custom_' . uniqid(),
-				'name' => sanitize_text_field( $_POST['mango_new_scheme_name'] ),
-			];
-			$color_keys = [ 'bg', 'glass', 'glass_hover', 'border', 'border_hover', 'accent', 'accent_glow', 'text', 'text_muted', 'text_dim' ];
-			foreach ( $color_keys as $k ) {
-				$new_scheme[ $k ] = sanitize_hex_color( $_POST[ 'mango_new_' . $k ] ?? '' );
+		// 保存主题色相
+		if ( isset( $_POST['mango_theme_hue'] ) ) {
+			$hue = trim( $_POST['mango_theme_hue'] );
+			if ( $hue === '' ) {
+				set_theme_mod( 'mango_theme_hue', '' );
+			} else {
+				$hue = intval( $hue );
+				$hue = max( 0, min( 360, $hue ) );
+				set_theme_mod( 'mango_theme_hue', $hue );
 			}
-			$schemes[] = $new_scheme;
-			$changed   = true;
-		}
-
-		// 更新已有方案
-		if ( ! empty( $_POST['mango_edit_scheme'] ) ) {
-			$edit_ids = $_POST['mango_edit_scheme'];
-			foreach ( $schemes as &$s ) {
-				if ( isset( $edit_ids[ $s['id'] ] ) ) {
-					$color_keys = [ 'bg', 'glass', 'glass_hover', 'border', 'border_hover', 'accent', 'accent_glow', 'text', 'text_muted', 'text_dim' ];
-					foreach ( $color_keys as $k ) {
-						$s[ $k ] = sanitize_hex_color( $_POST[ 'mango_color_' . $s['id'] . '_' . $k ] ?? '' );
-					}
-				}
-			}
-			unset( $s );
-			$changed = true;
-		}
-
-		// 保存方案
-		if ( $changed ) {
-			update_option( 'mango_color_schemes', $schemes );
 		}
 
 		// 应用主题方案
@@ -128,7 +87,7 @@ function mango_render_admin_page(): void {
 		// 布局设置（主题设置 tab）
 		if ( isset( $_POST['mango_sidebar_position'] ) ) {
 			$layout = [
-				'sidebar_position' => in_array( $_POST['mango_sidebar_position'], [ 'left', 'right', 'none' ] ) ? $_POST['mango_sidebar_position'] : 'right',
+				'sidebar_position' => in_array( $_POST['mango_sidebar_position'], [ 'left', 'right', 'double', 'none' ] ) ? $_POST['mango_sidebar_position'] : 'right',
 				'content_width'    => max( 600, min( 1400, intval( $_POST['mango_content_width'] ?? 960 ) ) ),
 				'archive_layout'   => in_array( $_POST['mango_archive_layout'] ?? '', [ 'grid', 'list' ] ) ? $_POST['mango_archive_layout'] : 'grid',
 			];
@@ -287,9 +246,8 @@ function mango_render_admin_page(): void {
 	$seo_home_desc      = $seo_settings['home_description'] ?? '';
 	$seo_home_keywords  = $seo_settings['home_keywords'] ?? '';
 
-	// 读取自定义配色方案
-	$schemes = get_option( 'mango_color_schemes', [] );
-	$tab     = $_GET['tab'] ?? 'basic';
+	$theme_hue = get_theme_mod( 'mango_theme_hue', '' );
+	$tab       = $_GET['tab'] ?? 'basic';
 	?>
 
 	<div class="wrap mango-settings-page">
@@ -345,7 +303,7 @@ function mango_render_admin_page(): void {
 
 			<!-- 内容区 -->
 			<div class="mango-settings-content">
-				<form method="post" action="">
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=mango-settings&tab=' . $tab ) ); ?>">
 					<?php wp_nonce_field( 'mango_settings_action', 'mango_settings_nonce' ); ?>
 
 					<?php if ( $tab === 'basic' ): ?>
@@ -1043,21 +1001,39 @@ function mango_render_admin_page(): void {
 					<?php elseif ( $tab === 'theme' ): /* === 主题设置选项卡 === */ ?>
 
 					<h2><?php _e( '主题设置', 'mango' ); ?></h2>
-					<p class="description"><?php _e( '选择内置风格，或创建自定义配色方案。', 'mango' ); ?></p>
+					<p class="description"><?php _e( '选择内置风格，或通过色相滑块调整主题色。', 'mango' ); ?></p>
 
 					<?php
-					$schemes = get_option( 'mango_color_schemes', [] );
-
 					$presets = [
 						'anime' => [
+							'label'  => __( 'Firefly 青绿暗色', 'mango' ),
+							'colors' => [ '#2dd4bf', '#1e392d', '' ],
+							'desc'   => __( '青色/青绿色为主色调的深色模式风格', 'mango' ),
+						],
+						'neon' => [
 							'label'  => __( 'Anime 紫蓝霓虹', 'mango' ),
 							'colors' => [ '#9b6cff', '#4da3ff', '' ],
 							'desc'   => __( '紫色与蓝色的霓虹氛围', 'mango' ),
 						],
-						'black' => [
-							'label'  => __( '黑色简约', 'mango' ),
-							'colors' => [ '#4a9e6b', '#6bc47f', '' ],
-							'desc'   => __( '黑绿搭配简约风格', 'mango' ),
+						'sakura' => [
+							'label'  => __( '樱粉晨曦', 'mango' ),
+							'colors' => [ '#ff7eb3', '#2a1220', '' ],
+							'desc'   => __( '粉红樱花般的柔和暖色调', 'mango' ),
+						],
+						'sunset' => [
+							'label'  => __( '琥珀黄昏', 'mango' ),
+							'colors' => [ '#ff9a3c', '#241a0f', '' ],
+							'desc'   => __( '琥珀色与橙黄的日落暖意', 'mango' ),
+						],
+						'aurora' => [
+							'label'  => __( '极光翠影', 'mango' ),
+							'colors' => [ '#00e676', '#0f2418', '' ],
+							'desc'   => __( '翡翠绿与极光般的清冷绿意', 'mango' ),
+						],
+						'starry' => [
+							'label'  => __( '霜月银白', 'mango' ),
+							'colors' => [ '#e0e7ff', '#1a1e2e', '' ],
+							'desc'   => __( '银白与淡紫的霜月夜空', 'mango' ),
 						],
 					];
 					?>
@@ -1067,7 +1043,8 @@ function mango_render_admin_page(): void {
 						<h3><?php _e( '内置预设', 'mango' ); ?></h3>
 						<div class="mango-scheme-grid">
 							<?php foreach ( $presets as $pid => $p ): ?>
-							<label class="mango-scheme-card <?php echo $style === $pid ? 'selected' : ''; ?>">
+							<label class="mango-scheme-card <?php echo $style === $pid ? 'selected' : ''; ?>"
+								data-accent="<?php echo esc_attr( $p['colors'][0] ); ?>">
 								<input type="radio" name="mango_theme_style" value="<?php echo $pid; ?>"
 									<?php checked( $style, $pid ); ?>>
 								<div class="mango-scheme-preview">
@@ -1084,109 +1061,59 @@ function mango_render_admin_page(): void {
 						</div>
 					</div>
 
-					<!-- 自定义方案 -->
+					<!-- 主题色相调节 -->
 					<div class="mango-scheme-section">
-						<h3><?php _e( '自定义配色', 'mango' ); ?></h3>
-
-						<?php
-						$scheme_color_fields = [
-							'bg' => '背景', 'glass' => '卡片背景', 'glass_hover' => '卡片悬停',
-							'border' => '边框', 'border_hover' => '边框悬停',
-							'accent' => '主题色', 'accent_glow' => '主题色光晕',
-							'text' => '正文', 'text_muted' => '次级文字', 'text_dim' => '弱化文字',
-						];
-						$scheme_defaults = [
-							'bg' => '', 'glass' => '', 'glass_hover' => '', 'border' => '', 'border_hover' => '',
-							'accent' => '#2dd4bf', 'accent_glow' => '',
-							'text' => '', 'text_muted' => '', 'text_dim' => '',
-						];
-						?>
-
-						<?php if ( empty( $schemes ) ): ?>
-							<p class="description" style="margin-bottom:12px"><?php _e( '还没有自定义配色，点击下方按钮添加。', 'mango' ); ?></p>
-						<?php else: ?>
-							<div class="mango-scheme-grid mango-scheme-grid--custom">
-							<?php foreach ( $schemes as $idx => $s ):
-								$selected = $style === $s['id'];
+						<h3><?php _e( '主题色相', 'mango' ); ?></h3>
+						<p class="description"><?php _e( '在预设基础上，微调主题色相（0-360°）。留空则使用预设的默认色相。', 'mango' ); ?></p>
+						<div class="mango-hue-control">
+							<?php
+							$current_hue = $theme_hue !== '' ? intval( $theme_hue ) : 165;
 							?>
-								<div class="mango-scheme-card mango-scheme-card--edit <?php echo $selected ? 'selected' : ''; ?>">
-									<label class="mango-scheme-select">
-										<input type="radio" name="mango_theme_style" value="<?php echo $s['id']; ?>"
-											<?php checked( $style, $s['id'] ); ?>>
-										<div class="mango-scheme-preview">
-											<span style="background:<?php echo $s['accent'] ?: '#2dd4bf'; ?>"></span>
-										</div>
-										<div class="mango-scheme-info">
-											<strong><?php echo esc_html( $s['name'] ); ?></strong>
-											<span><?php printf( __( '主题色 %s', 'mango' ), $s['accent'] ?: '默认' ); ?></span>
-										</div>
-									</label>
-
-									<!-- 编辑/删除按钮和折叠编辑区 -->
-									<div class="mango-scheme-actions">
-										<button type="button" class="button mango-toggle-edit"
-												data-target="mango-edit-<?php echo $idx; ?>">
-											<?php _e( '编辑', 'mango' ); ?>
-										</button>
-										<button type="button" class="button mango-delete-scheme"
-												data-id="<?php echo $s['id']; ?>"
-												data-name="<?php echo esc_attr( $s['name'] ); ?>">
-											<?php _e( '删除', 'mango' ); ?>
-										</button>
-									</div>
-
-									<div class="mango-edit-form" id="mango-edit-<?php echo $idx; ?>" style="display:none">
-										<input type="hidden" name="mango_edit_scheme[<?php echo $s['id']; ?>]" value="1">
-										<p style="margin:0 0 12px">
-											<span style="font-size:12px;font-weight:600;color:#3c434a;display:block;margin-bottom:2px"><?php _e( '名称', 'mango' ); ?></span>
-											<input type="text" name="mango_edit_name[<?php echo $s['id']; ?>]"
-												   value="<?php echo esc_attr( $s['name'] ); ?>" style="width:100%;max-width:320px">
-										</p>
-										<div class="mango-color-grid">
-										<?php foreach ( $scheme_color_fields as $f_key => $f_label ):
-											$val = $s[ $f_key ] ?? '';
-											$def = $scheme_defaults[ $f_key ] ?? '';
-										?>
-											<div class="mango-color-cell">
-												<span><?php echo $f_label; ?></span>
-												<input type="text" name="mango_edit_<?php echo $f_key; ?>[<?php echo $s['id']; ?>]"
-													   value="<?php echo esc_attr( $val ); ?>"
-													   class="mango-color-picker" data-default-color="<?php echo $def; ?>">
-											</div>
-										<?php endforeach; ?>
-										</div>
-									</div>
+							<div class="mango-hue-slider-wrap">
+								<div class="mango-hue-track">
+									<div class="mango-hue-gradient"></div>
+									<input type="range" id="mango-hue-slider" min="0" max="360" step="1"
+										   value="<?php echo esc_attr( $current_hue ); ?>">
 								</div>
-							<?php endforeach; ?>
 							</div>
-						<?php endif; ?>
-
-						<!-- 添加新方案按钮 + 折叠表单 -->
-						<button type="button" class="button button-secondary mango-toggle-edit"
-								data-target="mango-add-scheme-form">
-							+ <?php _e( '添加新配色', 'mango' ); ?>
-						</button>
-
-						<div class="mango-edit-form mango-add-form" id="mango-add-scheme-form" style="display:none;margin-top:16px">
-							<h4 style="margin:0 0 12px"><?php _e( '新配色方案', 'mango' ); ?></h4>
-							<p style="margin:0 0 12px">
-								<span style="font-size:12px;font-weight:600;color:#3c434a;display:block;margin-bottom:2px"><?php _e( '方案名称 *', 'mango' ); ?></span>
-								<input type="text" name="mango_new_scheme_name" style="width:100%;max-width:320px"
-									   placeholder="<?php _e( '例：我的主题配色', 'mango' ); ?>">
-							</p>
-							<div class="mango-color-grid">
-							<?php foreach ( $scheme_color_fields as $f_key => $f_label ):
-								$def = $scheme_defaults[ $f_key ] ?? '';
-							?>
-								<div class="mango-color-cell">
-									<span><?php echo $f_label; ?></span>
-									<input type="text" name="mango_new_<?php echo $f_key; ?>"
-										   class="mango-color-picker" data-default-color="<?php echo $def; ?>">
-								</div>
-							<?php endforeach; ?>
+							<div class="mango-hue-info">
+								<input type="hidden" name="mango_theme_hue" id="mango-hue-input"
+									   value="<?php echo esc_attr( $theme_hue ); ?>">
+								<span class="mango-hue-value">
+									<?php echo $theme_hue !== '' ? intval( $theme_hue ) . '°' : __( '默认', 'mango' ); ?>
+								</span>
+								<span class="mango-hue-swatch" style="background: <?php echo $theme_hue !== '' ? 'hsl(' . intval( $theme_hue ) . ', 80%, 55%)' : '#41c99c'; ?>"></span>
+								<button type="button" class="button button-small mango-hue-reset" <?php echo $theme_hue === '' ? 'disabled' : ''; ?>>
+									<?php _e( '重置', 'mango' ); ?>
+								</button>
 							</div>
 						</div>
 					</div>
+					<script>
+					jQuery(function($){
+						var $slider = $('#mango-hue-slider');
+						var $hidden = $('#mango-hue-input');
+						var $value = $('.mango-hue-value');
+						var $swatch = $('.mango-hue-swatch');
+						var $reset = $('.mango-hue-reset');
+
+						$slider.on('input change', function(){
+							var val = $(this).val();
+							$hidden.val(val);
+							$value.text(val + '°');
+							$swatch.css('background', 'hsl(' + val + ', 80%, 55%)');
+							$reset.prop('disabled', false);
+						});
+
+						$reset.on('click', function(){
+							$hidden.val('');
+							$slider.val(165);
+							$value.text('<?php _e( '默认', 'mango' ); ?>');
+							$swatch.css('background', '#41c99c');
+							$(this).prop('disabled', true);
+						});
+					});
+					</script>
 
 					<!-- 卡片圆角 -->
 					<div class="mango-scheme-section">
@@ -1214,8 +1141,9 @@ function mango_render_admin_page(): void {
 								<th scope="row"><?php _e( '侧栏位置', 'mango' ); ?></th>
 								<td>
 									<select name="mango_sidebar_position" style="min-width:160px;">
-										<option value="right" <?php selected( $sidebar_position, 'right' ); ?>><?php _e( '右侧', 'mango' ); ?></option>
-										<option value="left" <?php selected( $sidebar_position, 'left' ); ?>><?php _e( '左侧', 'mango' ); ?></option>
+										<option value="right" <?php selected( $sidebar_position, 'right' ); ?>><?php _e( '单右', 'mango' ); ?></option>
+										<option value="left" <?php selected( $sidebar_position, 'left' ); ?>><?php _e( '单左', 'mango' ); ?></option>
+										<option value="double" <?php selected( $sidebar_position, 'double' ); ?>><?php _e( '双栏', 'mango' ); ?></option>
 										<option value="none" <?php selected( $sidebar_position, 'none' ); ?>><?php _e( '无侧栏', 'mango' ); ?></option>
 									</select>
 								</td>
@@ -2383,32 +2311,41 @@ function mango_render_admin_page(): void {
 		</div>
 	</div>
 
-	<!-- 删除确认 & 编辑折叠 JS -->
+	<!-- 预设卡片交互 -->
 	<script>
 	jQuery(function($){
-		$(".mango-toggle-edit").on("click", function(){
-			var target = $("#" + $(this).data("target"));
-			target.slideToggle(200);
-			target.find(".mango-color-picker").each(function(){
-				if (!$(this).hasClass("wp-color-picker")) {
-					$(this).wpColorPicker();
-				}
-			});
-		});
-		$(".mango-delete-scheme").on("click", function(){
-			var btn = $(this);
-			var name = btn.data("name");
-			if (confirm("<?php _e( '确定删除配色方案"', 'mango' ); ?>" + name + "<?php _e( '"吗？', 'mango' ); ?>")) {
-				var form = btn.closest("form");
-				$("<input>").attr({type:"hidden", name:"mango_delete_scheme", value:btn.data("id")}).appendTo(form);
-				form.find("[name=\"mango_save\"]").trigger("click");
-			}
-		});
-		$(".mango-scheme-card").on("click", function(e){
-			if ($(e.target).closest("button, input, .mango-edit-form, .wp-picker-holder").length) return;
-			$(this).find("input[type=\"radio\"]").prop("checked", true);
-			$(this).closest(".mango-scheme-grid").find(".mango-scheme-card").removeClass("selected");
-			$(this).addClass("selected");
+		// 配色卡片交互
+		function mango_on_card_click(e) {
+			var card = $(this);
+			if ($(e.target).closest("button, .mango-edit-form, .wp-picker-holder").length) return;
+
+			card.find("input[type=\"radio\"]").prop("checked", true);
+
+			var grid = card.closest(".mango-scheme-grid");
+			grid.find(".mango-scheme-card").removeClass("selected");
+			card.addClass("selected");
+
+			var c = card.data("accent") || "#7c3aed";
+			grid.find(".mango-scheme-card").css({borderColor:"",boxShadow:"",background:""});
+			card.css({borderColor:c, boxShadow:"0 0 0 2px "+c+"33,0 2px 12px "+c+"1a", background:c+"0d"});
+
+			card.addClass("mango-scheme-flash");
+			setTimeout(function(){ card.removeClass("mango-scheme-flash"); }, 400);
+
+			$(".mango-toast").remove();
+			var name = card.find(".mango-scheme-info strong").text();
+			$("<div class=\"mango-toast\">已选择\u300C" + name + "\u300D，请点击保存生效</div>")
+				.appendTo(card.closest(".mango-scheme-section"))
+				.each(function(){ var t=$(this); setTimeout(function(){ t.addClass("show"); },10); setTimeout(function(){ t.removeClass("show"); setTimeout(function(){ t.remove(); },300); },3000); });
+		}
+
+		// 先解绑再绑，避免重复
+		$(".mango-scheme-card").off("click", mango_on_card_click).on("click", mango_on_card_click);
+
+		// 初始化已选中的卡片颜色
+		$(".mango-scheme-card.selected").each(function(){
+			var c = $(this).data("accent") || "#7c3aed";
+			$(this).css({borderColor:c, boxShadow:"0 0 0 2px "+c+"33,0 2px 12px "+c+"1a", background:c+"0d"});
 		});
 	});
 	</script>
@@ -2693,10 +2630,29 @@ function mango_render_admin_page(): void {
 		box-shadow: 0 2px 12px rgba(124, 58, 237, 0.08);
 		transform: translateY(-1px);
 	}
-	.mango-scheme-card.selected {
-		border-color: #7c3aed;
-		box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15), 0 2px 12px rgba(124, 58, 237, 0.1);
-		background: #f5f3ff;
+	.mango-scheme-card.mango-scheme-flash {
+		animation: mango-card-pop 0.4s ease;
+	}
+	@keyframes mango-card-pop {
+		0% { transform: scale(1); }
+		40% { transform: scale(1.04); }
+		100% { transform: scale(1); }
+	}
+	.mango-toast {
+		margin-top: 10px;
+		padding: 8px 14px;
+		background: #1e293b;
+		color: #fff;
+		border-radius: 6px;
+		font-size: 12.5px;
+		opacity: 0;
+		transition: opacity 0.3s ease, transform 0.3s ease;
+		transform: translateY(-4px);
+		display: inline-block;
+	}
+	.mango-toast.show {
+		opacity: 1;
+		transform: translateY(0);
 	}
 	.mango-scheme-card input[type="radio"] {
 		position: absolute;
@@ -2793,9 +2749,121 @@ function mango_render_admin_page(): void {
 		color: #64748b;
 		white-space: nowrap;
 	}
+	.mango-color-input-wrap {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.mango-color-cell .mango-color-chip {
+		display: inline-block;
+		width: 18px;
+		height: 18px;
+		border-radius: 3px;
+		border: 1px solid rgba(0,0,0,0.1);
+		flex-shrink: 0;
+	}
 	.mango-add-form {
 		border-style: dashed;
 		background: #fafbfc;
+	}
+
+	/* ===== Hue Slider ===== */
+	.mango-hue-control {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		max-width: 480px;
+		padding: 10px 0;
+		flex-wrap: wrap;
+	}
+	.mango-hue-slider-wrap {
+		flex: 1;
+		min-width: 200px;
+	}
+	.mango-hue-track {
+		position: relative;
+		height: 28px;
+		display: flex;
+		align-items: center;
+	}
+	.mango-hue-gradient {
+		position: absolute;
+		top: 50%;
+		left: 0;
+		right: 0;
+		height: 8px;
+		transform: translateY(-50%);
+		border-radius: 4px;
+		background: linear-gradient(to right,
+			hsl(0, 80%, 55%),
+			hsl(60, 80%, 55%),
+			hsl(120, 80%, 55%),
+			hsl(180, 80%, 55%),
+			hsl(240, 80%, 55%),
+			hsl(300, 80%, 55%),
+			hsl(360, 80%, 55%)
+		);
+		pointer-events: none;
+	}
+	.mango-hue-track input[type="range"] {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 100%;
+		height: 8px;
+		background: transparent;
+		border-radius: 4px;
+		outline: none;
+		position: relative;
+		z-index: 1;
+		cursor: pointer;
+	}
+	.mango-hue-track input[type="range"]::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 22px;
+		height: 22px;
+		background: #fff;
+		border: 3px solid #7c3aed;
+		border-radius: 50%;
+		cursor: pointer;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+		transition: transform 0.15s ease;
+	}
+	.mango-hue-track input[type="range"]::-webkit-slider-thumb:hover {
+		transform: scale(1.15);
+	}
+	.mango-hue-track input[type="range"]::-moz-range-thumb {
+		width: 22px;
+		height: 22px;
+		background: #fff;
+		border: 3px solid #7c3aed;
+		border-radius: 50%;
+		cursor: pointer;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+	}
+	.mango-hue-info {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.mango-hue-value {
+		font-size: 15px;
+		font-weight: 700;
+		color: #7c3aed;
+		min-width: 52px;
+		font-variant-numeric: tabular-nums;
+	}
+	.mango-hue-swatch {
+		display: inline-block;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		border: 2px solid rgba(0, 0, 0, 0.12);
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+		flex-shrink: 0;
+	}
+	.mango-hue-reset {
+		font-size: 12px !important;
 	}
 
 	/* ===== Radius Slider ===== */

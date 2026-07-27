@@ -442,6 +442,7 @@ function WallpaperContent({
     >
       <img src={bannerImage} alt="" className="wallpaper-bg" onLoad={onBannerLoad} />
       <div className="wallpaper-overlay" aria-hidden="true" />
+      <div id="wallpaper-gradient" aria-hidden="true" />
       <div id="header-waves" aria-hidden="true">
         <svg
           className="waves"

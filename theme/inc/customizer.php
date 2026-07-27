@@ -26,23 +26,53 @@ function mango_customize_register( WP_Customize_Manager $wp_customize ): void {
 		'label'   => __( '主题配色风格', 'mango' ),
 		'type'    => 'radio',
 		'choices' => [
-			'anime' => __( 'Firefly 青绿暗色', 'mango' ),
-			'black' => __( '纯黑简约', 'mango' ),
+			'anime'  => __( 'Firefly 青绿暗色', 'mango' ),
+			'neon'   => __( 'Anime 紫蓝霓虹', 'mango' ),
+			'sakura' => __( '樱粉晨曦', 'mango' ),
+			'sunset' => __( '琥珀黄昏', 'mango' ),
+			'aurora' => __( '极光翠影', 'mango' ),
+			'starry' => __( '霜月银白', 'mango' ),
 		],
 	] );
+
+	// 主题色相设置
+	$wp_customize->add_setting( 'mango_theme_hue', [
+		'default'           => '',
+		'sanitize_callback' => 'mango_sanitize_hue',
+		'transport'         => 'refresh',
+		'type'              => 'theme_mod',
+	] );
+
+	$wp_customize->add_control( 'mango_theme_hue', [
+		'section'  => 'mango_theme',
+		'label'    => __( '主题色相 (0-360)', 'mango' ),
+		'type'     => 'number',
+		'input_attrs' => [
+			'min'  => 0,
+			'max'  => 360,
+			'step' => 1,
+		],
+	] );
+}
+
+/**
+ * 色相值验证
+ */
+function mango_sanitize_hue( $value ): string {
+	if ( $value === '' ) {
+		return '';
+	}
+	$hue = intval( $value );
+	$hue = max( 0, min( 360, $hue ) );
+	return (string) $hue;
 }
 add_action( 'customize_register', 'mango_customize_register' );
 
 /**
- * 主题风格与自定义方案验证
+ * 主题风格验证
  */
 function mango_sanitize_theme_style( string $value ): string {
-	// 内置风格
-	if ( in_array( $value, [ 'anime', 'black' ], true ) ) {
-		return $value;
-	}
-	// 自定义方案 ID
-	if ( str_starts_with( $value, 'custom_' ) ) {
+	if ( in_array( $value, [ 'anime', 'neon', 'sakura', 'sunset', 'aurora', 'starry' ], true ) ) {
 		return $value;
 	}
 	return 'anime';
@@ -53,15 +83,10 @@ function mango_sanitize_theme_style( string $value ): string {
  */
 function mango_theme_body_class( array $classes ): array {
 	$style = get_theme_mod( 'mango_theme_style', 'anime' );
-	// 自定义方案使用 dark-theme 作为基础布局
-	if ( str_starts_with( $style, 'custom_' ) ) {
-		$classes[] = 'dark-theme';
-		$classes[] = 'custom-theme';
+	if ( in_array( $style, [ 'neon', 'sakura', 'sunset', 'aurora', 'starry' ], true ) ) {
+		$classes[] = $style . '-theme';
 	} else {
 		$classes[] = 'dark-theme';
-		if ( $style === 'black' ) {
-			$classes[] = 'black-theme';
-		}
 	}
 
 	// 随机图片兜底开关
@@ -75,49 +100,21 @@ function mango_theme_body_class( array $classes ): array {
 add_filter( 'body_class', 'mango_theme_body_class' );
 
 /**
- * 向前端输出自定义配色的 CSS 变量
+ * 向前端输出自定义色相 CSS 变量
  */
 function mango_output_custom_css(): void {
-	$style = get_theme_mod( 'mango_theme_style', 'anime' );
+	$hue = get_theme_mod( 'mango_theme_hue', '' );
 
-	// 仅对自定义方案（custom_xxx）输出 CSS 变量
-	if ( ! str_starts_with( $style, 'custom_' ) ) {
+	if ( $hue === '' ) {
 		return;
 	}
 
-	$scheme = mango_get_color_scheme( $style );
-	if ( ! $scheme ) {
-		return;
-	}
+	$hue = intval( $hue );
+	$hue = max( 0, min( 360, $hue ) );
 
-	// 所有可自定义的 CSS 变量映射
-	$css_var_map = [
-		'bg'           => '--bg',
-		'glass'        => '--glass',
-		'glass_hover'  => '--glass-hover',
-		'border'       => '--border',
-		'border_hover' => '--border-hover',
-		'accent'       => '--accent',
-		'accent_glow'  => '--accent-glow',
-		'text'         => '--text',
-		'text_muted'   => '--text-muted',
-		'text_dim'     => '--text-dim',
-	];
-
-	$rules = [];
-	foreach ( $css_var_map as $key => $css_var ) {
-		if ( ! empty( $scheme[ $key ] ) ) {
-			$rules[] = "{$css_var}: {$scheme[$key]};";
-		}
-	}
-
-	if ( empty( $rules ) ) {
-		return;
-	}
-
-	echo '<style id="mango-custom-colors">' . "\n";
-	echo "body.dark-theme {\n";
-	echo '  ' . implode( "\n  ", $rules ) . "\n";
+	echo '<style id="mango-custom-hue">' . "\n";
+	echo "body[class*=\"-theme\"] {\n";
+	echo "  --hue: {$hue};\n";
 	echo "}\n";
 	echo '</style>' . "\n";
 }
@@ -133,7 +130,7 @@ function mango_output_radius_css(): void {
 		$radius = 25;
 	}
 	echo '<style id="mango-radius">' . "\n";
-	echo "body.dark-theme, body.custom-theme {\n";
+	echo "body.dark-theme, body.neon-theme, body.sakura-theme, body.sunset-theme, body.aurora-theme, body.starry-theme {\n";
 	echo "  --radius-sm: {$radius}px;\n";
 	echo "  --radius-md: {$radius}px;\n";
 	echo "  --radius-lg: {$radius}px;\n";

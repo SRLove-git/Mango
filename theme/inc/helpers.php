@@ -5,17 +5,6 @@
  * @package Mango
  */
 
-/** 获取单个自定义配色方案 */
-function mango_get_color_scheme( string $id ): ?array {
-	$schemes = get_option( 'mango_color_schemes', [] );
-	foreach ( $schemes as $s ) {
-		if ( $s['id'] === $id ) {
-			return $s;
-		}
-	}
-	return null;
-}
-
 /**
  * 将十六进制颜色转为 HSL 数组（Stellar label 格式）
  */

@@ -1478,19 +1478,16 @@ body.wallpaper-mode-overlay .wallpaper-wrapper {
   height: 100vh;
   max-height: none;
   z-index: 0;
-  opacity: 0.8;
+  opacity: var(--overlay-opacity, 0.8);
 }
 
 body.wallpaper-mode-overlay .wallpaper-wrapper::after {
   height: 0;
 }
 
-body.wallpaper-mode-overlay .wallpaper-overlay {
-  background: none;
-}
-
-body.wallpaper-mode-overlay .top-gradient-highlight {
-  display: none;
+body.wallpaper-mode-overlay .wallpaper-bg {
+  filter: blur(var(--overlay-blur, 0px));
+  transform: scale(1.05);
 }
 
 body.wallpaper-mode-overlay {
@@ -1547,13 +1544,13 @@ body.wallpaper-mode-overlay .main-grid {
 }
 
 body.wallpaper-mode-overlay {
-  --glass: rgba(0, 0, 0, 0.45);
-  --glass-hover: rgba(0, 0, 0, 0.55);
+  --glass: rgba(0, 0, 0, var(--card-transparent-opacity, 0.45));
+  --glass-hover: rgba(0, 0, 0, calc(var(--card-transparent-opacity, 0.45) + 0.10));
 }
 
 body.wallpaper-mode-overlay .dark {
-  --glass: rgba(0, 0, 0, 0.55);
-  --glass-hover: rgba(0, 0, 0, 0.65);
+  --glass: rgba(0, 0, 0, calc(var(--card-transparent-opacity, 0.45) + 0.10));
+  --glass-hover: rgba(0, 0, 0, calc(var(--card-transparent-opacity, 0.45) + 0.20));
 }
 
 body.wallpaper-mode-overlay .glass,
@@ -1691,16 +1688,35 @@ body.wallpaper-mode-none #header-waves {
 }
 
 /* 渐变过渡开关 */
-body.gradient-disabled .wallpaper-wrapper {
-  transition: none;
+body.gradient-disabled #wallpaper-gradient {
+  display: none !important;
 }
 
-body.gradient-disabled .wallpaper-bg {
-  transition: none;
+/* 水波纹优先：开启水波纹时隐藏渐变 */
+body:not(.waves-disabled) #wallpaper-gradient {
+  display: none !important;
+}
+
+/* Overlay 和 None 模式隐藏渐变 */
+body.wallpaper-mode-overlay #wallpaper-gradient,
+body.wallpaper-mode-none #wallpaper-gradient {
+  display: none !important;
+}
+
+#wallpaper-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 10%;
+  z-index: 12;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  transition: opacity 0.3s ease;
 }
 
 /* 樱花特效开关 */
-body.sakura-disabled ~ #click-effect-canvas {
+body.sakura-disabled #sakura-canvas {
   display: none;
 }
 
@@ -5793,6 +5809,24 @@ body.live2d-position-left #waifu-toggle.waifu-toggle-active:hover {
   background: rgba(255, 255, 255, 0.65);
 }
 
+/* Overlay 滑块轨道 (Firefly 风格) */
+.overlay-slider-track {
+  height: 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  background: hsla(var(--hue), 22%, 28%, 0.18);
+}
+
+.overlay-slider-track .wallpaper-hue-thumb {
+  width: 6px;
+  height: 14px;
+  border-radius: 2px;
+  background: #fff;
+}
+
 /* 色相重置按钮 */
 .wallpaper-hue-reset-btn {
   display: inline-flex;
@@ -5829,6 +5863,46 @@ body.live2d-position-left #waifu-toggle.waifu-toggle-active:hover {
   border: 1px solid var(--border);
   border-radius: 5px;
   line-height: 1.5;
+}
+
+/* ---- 透明设置滑块值 ---- */
+.wallpaper-section-value {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ---- Overlay Slider ---- */
+.overlay-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  outline: none;
+  margin: 4px 0;
+}
+
+.overlay-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.overlay-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ---- 移动端适配 ---- */
