@@ -11,6 +11,7 @@ export default function Home() {
   const [posts, setPosts] = useState<WPPost[]>([])
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
+  const archiveLayout = (window as any).MANGO_DATA?.layout?.archive_layout || 'grid'
 
   useEffect(() => {
     document.title = currentPage > 1 ? `第 ${currentPage} 页 - Mango` : 'Mango'
@@ -31,7 +32,7 @@ export default function Home() {
   return (
     <>
       {/* Post list */}
-      <div>
+      <div className={`post-list post-list--${archiveLayout}`}>
         {posts.length === 0 ? (
           <div className="empty-state">暂无文章</div>
         ) : (

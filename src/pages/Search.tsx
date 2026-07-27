@@ -12,6 +12,7 @@ export default function Search() {
   const [posts, setPosts] = useState<WPPost[]>([])
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
+  const archiveLayout = (window as any).MANGO_DATA?.layout?.archive_layout || 'grid'
 
   useEffect(() => {
     document.title = `搜索: ${query || '...'} - Mango`
@@ -40,7 +41,9 @@ export default function Search() {
         <div className="glass empty-state">未找到相关文章</div>
       ) : (
         <>
-          {posts.map((post) => <PostCard key={post.id} post={post} />)}
+          <div className={`post-list post-list--${archiveLayout}`}>
+            {posts.map((post) => <PostCard key={post.id} post={post} />)}
+          </div>
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

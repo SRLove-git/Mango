@@ -12,6 +12,7 @@ export default function Category() {
   const [posts, setPosts] = useState<WPPost[]>([])
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
+  const archiveLayout = (window as any).MANGO_DATA?.layout?.archive_layout || 'grid'
 
   useEffect(() => {
     if (!slug) return
@@ -33,11 +34,13 @@ export default function Category() {
   return (
     <>
       <h2 className="section-title">分类：{slug}</h2>
-      {posts.length === 0 ? (
-        <div className="glass empty-state">该分类暂无文章</div>
-      ) : (
-        posts.map((post) => <PostCard key={post.id} post={post} />)
-      )}
+      <div className={`post-list post-list--${archiveLayout}`}>
+        {posts.length === 0 ? (
+          <div className="glass empty-state">该分类暂无文章</div>
+        ) : (
+          posts.map((post) => <PostCard key={post.id} post={post} />)
+        )}
+      </div>
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}

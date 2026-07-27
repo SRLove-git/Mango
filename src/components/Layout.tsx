@@ -3,6 +3,7 @@ import PageTransition from './PageTransition'
 import CategoryBar from './CategoryBar'
 import Sidebar from './Sidebar'
 import Live2D from './Live2D'
+import WallpaperSettings from './WallpaperSettings'
 import { useState, useEffect, useRef } from 'react'
 import type { WPCategory, WPMenuItem, Topic } from '../api/wordpress'
 import { getCategories, getTags, getUser, getMenu, getCategoryMenu, getTopics } from '../api/wordpress'
@@ -271,6 +272,9 @@ export default function Layout() {
 
             {/* Right Side Actions */}
             <div className="navbar-actions">
+              {/* 壁纸/显示设置面板触发按钮 */}
+              <WallpaperSettings />
+
               {/* Mobile menu toggle — 在 lg (1024px) 以上隐藏 */}
               <button
                 className="navbar-mobile-btn"
@@ -314,10 +318,10 @@ export default function Layout() {
         </div>
       </div>
 
-      {/* ===== Main Grid — 借鉴 Firefly 的响应式 Grid 布局 ===== */}
-      <div className={`main-grid${sidebarPosition === 'none' ? ' main-grid--no-sidebar' : ''}`}>
-        {/* Left Sidebar — md 断点以上显示 */}
-        {sidebarPosition !== 'none' && (
+      {/* ===== Main Grid — 响应式 Grid 布局 ===== */}
+      <div className={`main-grid${sidebarPosition === 'none' ? ' main-grid--no-sidebar' : sidebarPosition === 'left' ? ' main-grid--left' : sidebarPosition === 'right' ? ' main-grid--right' : ' main-grid--double'}`}>
+        {/* Left Sidebar */}
+        {(sidebarPosition === 'left' || sidebarPosition === 'double') && (
           <Sidebar side="left" className="sidebar-left-grid" />
         )}
 
@@ -331,8 +335,8 @@ export default function Layout() {
           </main>
         </div>
 
-        {/* Right Sidebar — xl 断点以上显示 */}
-        {sidebarPosition !== 'none' && (
+        {/* Right Sidebar */}
+        {(sidebarPosition === 'right' || sidebarPosition === 'double') && (
           <Sidebar side="right" className="sidebar-right-grid" />
         )}
       </div>
