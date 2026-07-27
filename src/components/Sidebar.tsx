@@ -147,6 +147,7 @@ export default function Sidebar({ side, className }: Props) {
               { key: 'bilibili', url: socialLinks.bilibili, label: 'Bilibili' },
               { key: 'weibo', url: socialLinks.weibo, label: '微博' },
               { key: 'email', url: socialLinks.email, label: 'Email' },
+              { key: 'rss', url: socialLinks.rss, label: 'RSS' },
             ].filter(i => i.url);
             if (items.length === 0) return null;
             return (
@@ -180,6 +181,11 @@ export default function Sidebar({ side, className }: Props) {
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="2" y="4" width="20" height="16" rx="2"/>
                         <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                      </svg>
+                    )}
+                    {item.key === 'rss' && (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27zm0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93z"/>
                       </svg>
                     )}
                   </a>

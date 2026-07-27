@@ -110,6 +110,7 @@ function mango_enqueue_scripts(): void {
 			'bilibili' => $mango_social['bilibili'] ?? '',
 			'weibo'    => $mango_social['weibo'] ?? '',
 			'email'    => $mango_social['email'] ?? '',
+			'rss'      => ! empty( $mango_social['rss'] ) ? get_bloginfo( 'rss2_url' ) : '',
 		],
 		'postDisplay' => [
 			'excerpt_length' => intval( $mango_post_display['excerpt_length'] ?? 160 ),

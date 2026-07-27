@@ -148,7 +148,9 @@ function mango_render_admin_page(): void {
 
 		// 社交链接（高级设置 tab）
 		if ( isset( $_POST['mango_social_links'] ) ) {
+			$rss_enabled = ! empty( $_POST['mango_social_links']['rss'] ) ? '1' : '';
 			$social_links = array_map( 'esc_url_raw', $_POST['mango_social_links'] );
+			$social_links['rss'] = $rss_enabled;
 			update_option( 'mango_social_links', $social_links, false );
 		}
 
@@ -2216,6 +2218,16 @@ function mango_render_admin_page(): void {
 									<input type="email" id="mango_social_email" name="mango_social_links[email]"
 										   value="<?php echo esc_attr( $social_links['email'] ?? '' ); ?>" class="regular-text"
 										   placeholder="hello@example.com">
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><label for="mango_social_rss">RSS</label></th>
+								<td>
+									<label>
+										<input type="checkbox" id="mango_social_rss" name="mango_social_links[rss]" value="1" <?php checked( $social_links['rss'] ?? '', '1' ); ?>>
+										<?php _e( '在社交链接中显示 RSS 订阅', 'mango' ); ?>
+									</label>
+									<p class="description"><?php _e( '启用后将自动使用站点默认的 RSS Feed 地址。', 'mango' ); ?></p>
 								</td>
 							</tr>
 						</table>
