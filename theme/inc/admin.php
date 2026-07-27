@@ -50,6 +50,7 @@ function mango_render_admin_page(): void {
 				'site_name'        => sanitize_text_field( $_POST['mango_site_name'] ?? '' ),
 				'site_logo'        => esc_url_raw( $_POST['mango_site_logo'] ?? '' ),
 				'avatar_url'       => esc_url_raw( $_POST['mango_avatar_url'] ?? '' ),
+				'bio_text'         => sanitize_text_field( $_POST['mango_bio_text'] ?? '' ),
 				'footer_text'      => sanitize_text_field( $_POST['mango_footer_text'] ?? '' ),
 				'random_image_api' => esc_url_raw( $_POST['mango_random_image_api'] ?? '' ),
 				'use_random_image' => isset( $_POST['mango_use_random_image'] ) ? '1' : '0',
@@ -190,6 +191,7 @@ function mango_render_admin_page(): void {
 	$site_name         = $basic['site_name'] ?? '';
 	$site_logo         = $basic['site_logo'] ?? '';
 	$avatar_url        = $basic['avatar_url'] ?? '';
+	$bio_text          = $basic['bio_text'] ?? '';
 	$footer_text       = $basic['footer_text'] ?? '';
 	$random_image_api  = $basic['random_image_api'] ?? '';
 	$use_random_image  = $basic['use_random_image'] ?? '1';
@@ -341,6 +343,15 @@ function mango_render_admin_page(): void {
 									   value="<?php echo esc_attr( $avatar_url ); ?>" class="regular-text"
 									   placeholder="https://example.com/avatar.jpg">
 								<p class="description"><?php _e( '侧栏头像图片地址，留空使用 Gravatar。', 'mango' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="mango_bio_text"><?php _e( '个人简介', 'mango' ); ?></label></th>
+							<td>
+								<input type="text" id="mango_bio_text" name="mango_bio_text"
+									   value="<?php echo esc_attr( $bio_text ); ?>" class="regular-text"
+									   placeholder="<?php _e( '分享技术、生活与思考', 'mango' ); ?>">
+								<p class="description"><?php _e( '显示在侧边栏个人资料中的简介文字，留空使用 WordPress 用户描述。', 'mango' ); ?></p>
 							</td>
 						</tr>
 						<tr>

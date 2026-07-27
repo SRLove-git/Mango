@@ -102,6 +102,7 @@ function mango_enqueue_scripts(): void {
 		'siteName'        => ! empty( $mango_basic['site_name'] ) ? $mango_basic['site_name'] : get_bloginfo( 'name' ),
 		'siteDescription' => get_bloginfo( 'description' ),
 		'siteLogo'        => esc_url_raw( $mango_basic['site_logo'] ?? '' ),
+		'bioText'         => $mango_basic['bio_text'] ?? '',
 		'randomImageApi'  => esc_url_raw( $mango_basic['random_image_api'] ?? '' ),
 		'useRandomImage' => ( $mango_basic['use_random_image'] ?? '1' ) === '1',
 		'siteStartDate'  => $mango_basic['site_start_date'] ?? '',

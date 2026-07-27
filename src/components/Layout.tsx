@@ -4,6 +4,7 @@ import CategoryBar from './CategoryBar'
 import Sidebar from './Sidebar'
 import Live2D from './Live2D'
 import WallpaperSettings from './WallpaperSettings'
+import TypingSaying from './TypingSaying'
 import { useState, useEffect, useRef } from 'react'
 import type { WPCategory, WPMenuItem, Topic } from '../api/wordpress'
 import { getCategories, getTags, getUser, getMenu, getCategoryMenu, getTopics } from '../api/wordpress'
@@ -572,6 +573,7 @@ function WallpaperContent({
                 {(window as any).MANGO_DATA.siteDescription}
               </p>
             )}
+            <TypingSaying />
           </div>
         </div>
       ) : bannerTitle ? (

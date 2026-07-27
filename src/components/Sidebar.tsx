@@ -138,7 +138,7 @@ export default function Sidebar({ side, className }: Props) {
             )}
           </div>
           <h2>{user?.name || 'Mango'}</h2>
-          <p>{user?.description || '分享技术、生活与思考'}</p>
+          <p>{(window as any).MANGO_DATA?.bioText || user?.description || '分享技术、生活与思考'}</p>
           {(() => {
             const socialLinks = (window as any).MANGO_DATA?.socialLinks || {};
             const items: { key: string; url: string; label: string }[] = [
