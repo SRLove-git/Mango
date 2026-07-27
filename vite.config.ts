@@ -4,7 +4,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { resolve } from 'path'
 import type { Plugin } from 'vite'
 
-const THEME_DIR = '/opt/homebrew/var/www/wp-content/themes/mango'
+const THEME_DIR = process.env.THEME_OUTPUT_DIR || '/opt/homebrew/var/www/wp-content/themes/mango'
 const THEME_SRC = resolve(__dirname, 'theme')
 
 // 递归复制文件

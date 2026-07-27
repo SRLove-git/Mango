@@ -26,6 +26,11 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          THEME_OUTPUT_DIR: dist
+
+      - name: Package Mango.zip
+        run: cd dist && zip -r ../Mango.zip .
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -33,3 +38,4 @@ jobs:
           name: ${{ github.ref_name }}
           generate_release_notes: true
           prerelease: false
+          files: Mango.zip
