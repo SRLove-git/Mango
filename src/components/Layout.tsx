@@ -9,6 +9,7 @@ import { getCategories, getTags, getUser, getMenu, getCategoryMenu, getTopics } 
 import { getRandomImageUrl } from '../api/image'
 import SiteDataContext from '../context/SiteDataContext'
 import { ArticleTocProvider } from '../context/ArticleTocContext'
+import { BannerTitleProvider, useBannerTitle } from '../context/BannerTitleContext'
 
 export default function Layout() {
   const navigate = useNavigate()
@@ -23,6 +24,7 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [bannerLoaded, setBannerLoaded] = useState(false)
+  const [expandedSubmenu, setExpandedSubmenu] = useState<number | null>(null)
   const wallpaperRef = useRef<HTMLDivElement>(null)
   const sidebarPosition = (window as any).MANGO_DATA?.layout?.sidebar_position || 'right'
   const bannerImage = (window as any).MANGO_DATA?.bannerImage || getRandomImageUrl('banner')
@@ -37,39 +39,138 @@ export default function Layout() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // 导航栏链接渲染函数
-  const renderNavLink = (item: WPMenuItem, isMobile: boolean = false) => {
+  // 获取子菜单项
+  const getChildren = (parentId: number) =>
+    menuItems
+      .filter((item) => item.parent === parentId)
+      .sort((a, b) => a.order - b.order)
+
+  // 桌面端导航链接渲染（含下拉菜单）
+  const renderNavLink = (item: WPMenuItem) => {
+    const children = getChildren(item.id)
     const isInternal = (window as any).MANGO_DATA?.siteUrl
       ? item.url.startsWith((window as any).MANGO_DATA.siteUrl)
       : false
     const href = isInternal ? new URL(item.url).pathname : item.url
     const isActive = isInternal && location.pathname === href
-    const className = isMobile ? 'navbar-mobile-link' : 'navbar-link'
+
+    // 有子菜单 → 下拉菜单
+    if (children.length > 0) {
+      return (
+        <div key={item.id} className="navbar-dropdown">
+          <button className="navbar-link dropdown-trigger">
+            {item.title}
+            <svg className="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+              <path d="M3 4.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <div className="dropdown-menu">
+            {children.map((child) => {
+              const childInternal = (window as any).MANGO_DATA?.siteUrl
+                ? child.url.startsWith((window as any).MANGO_DATA.siteUrl)
+                : false
+              const childHref = childInternal ? new URL(child.url).pathname : child.url
+              const childActive = childInternal && location.pathname === childHref
+              if (childInternal) {
+                return (
+                  <Link key={child.id} to={childHref} className={`dropdown-item${childActive ? ' active' : ''}`}>
+                    {child.title}
+                  </Link>
+                )
+              }
+              return (
+                <a key={child.id} href={child.url} className="dropdown-item" target={child.target || '_blank'} rel={child.target ? undefined : 'noopener noreferrer'}>
+                  {child.title}
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      )
+    }
 
     if (isInternal) {
       return (
-        <Link
-          key={item.id}
-          to={href}
-          className={`${className}${isActive ? ' active' : ''}`}
-          onClick={isMobile ? () => setMobileMenuOpen(false) : undefined}
-        >
+        <Link key={item.id} to={href} className={`navbar-link${isActive ? ' active' : ''}`}>
           {item.title}
         </Link>
       )
     }
     return (
-      <a
-        key={item.id}
-        href={item.url}
-        className={className}
-        target={item.target || '_blank'}
-        rel={item.target ? undefined : 'noopener noreferrer'}
-      >
+      <a key={item.id} href={item.url} className="navbar-link" target={item.target || '_blank'} rel={item.target ? undefined : 'noopener noreferrer'}>
         {item.title}
       </a>
     )
   }
+
+  // 移动端菜单项渲染（含可折叠子菜单）
+  const renderMobileMenuItem = (item: WPMenuItem) => {
+    const children = getChildren(item.id)
+    const isInternal = (window as any).MANGO_DATA?.siteUrl
+      ? item.url.startsWith((window as any).MANGO_DATA.siteUrl)
+      : false
+    const href = isInternal ? new URL(item.url).pathname : item.url
+    const isActive = isInternal && location.pathname === href
+    const isExpanded = expandedSubmenu === item.id
+
+    if (children.length > 0) {
+      return (
+        <div key={item.id} className="mobile-menu-section">
+          <button
+            className={`mobile-menu-parent${isExpanded ? ' expanded' : ''}`}
+            onClick={() => setExpandedSubmenu(isExpanded ? null : item.id)}
+          >
+            <span>{item.title}</span>
+            <svg className="mobile-menu-arrow" width="14" height="14" viewBox="0 0 12 12" fill="currentColor">
+              <path d="M4 3l4 3-4 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <div className={`mobile-submenu${isExpanded ? ' expanded' : ''}`}>
+            {children.map((child) => {
+              const childInternal = (window as any).MANGO_DATA?.siteUrl
+                ? child.url.startsWith((window as any).MANGO_DATA.siteUrl)
+                : false
+              const childHref = childInternal ? new URL(child.url).pathname : child.url
+              const childActive = childInternal && location.pathname === childHref
+              const onChildClick = () => setMobileMenuOpen(false)
+              if (childInternal) {
+                return (
+                  <Link key={child.id} to={childHref} className={`mobile-menu-child${childActive ? ' active' : ''}`} onClick={onChildClick}>
+                    {child.title}
+                  </Link>
+                )
+              }
+              return (
+                <a key={child.id} href={child.url} className="mobile-menu-child" target={child.target || '_blank'} rel={child.target ? undefined : 'noopener noreferrer'} onClick={onChildClick}>
+                  {child.title}
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      )
+    }
+
+    const linkClass = `mobile-menu-link${isActive ? ' active' : ''}`
+    const onClick = () => setMobileMenuOpen(false)
+
+    if (isInternal) {
+      return (
+        <Link key={item.id} to={href} className={linkClass} onClick={onClick}>
+          {item.title}
+        </Link>
+      )
+    }
+    return (
+      <a key={item.id} href={item.url} className={linkClass} target={item.target || '_blank'} rel={item.target ? undefined : 'noopener noreferrer'} onClick={onClick}>
+        {item.title}
+      </a>
+    )
+  }
+
+  const topLevelItems = menuItems
+    .filter((item) => item.parent === 0)
+    .sort((a, b) => a.order - b.order)
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {})
@@ -88,53 +189,26 @@ export default function Layout() {
   }
 
   return (
+    <BannerTitleProvider>
     <SiteDataContext.Provider value={{ user, categories, tags, topics }}>
     <ArticleTocProvider>
     <div className={`site-wrapper${isHomePage ? ' home' : ''}`}>
       {/* Top Gradient Highlight — 参照 Firefly 的顶部渐变高光效果 */}
       <div className="top-gradient-highlight" aria-hidden="true" />
 
-      {/* ===== Banner / Wallpaper — Firefly 风格顶部全屏图片 ===== */}
-      <div
-        id="wallpaper-wrapper"
-        ref={wallpaperRef}
-        className="wallpaper-wrapper"
-        data-loaded={bannerLoaded}
-      >
-        {/* 背景图片 */}
-        <img
-          src={bannerImage}
-          alt=""
-          className="wallpaper-bg"
-          onLoad={() => setBannerLoaded(true)}
-        />
-        {/* 暗色渐变叠加层 */}
-        <div className="wallpaper-overlay" aria-hidden="true" />
-        {/* 首页文字叠加层 */}
-        {isHomePage && (
-          <div className="banner-home-text-overlay">
-            <div>
-              <h1 className="banner-title">
-                {(window as any).MANGO_DATA?.siteName || 'Mango'}
-              </h1>
-              {(window as any).MANGO_DATA?.siteDescription && (
-                <p className="banner-subtitle">
-                  {(window as any).MANGO_DATA.siteDescription}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-        {/* 滚动提示 */}
-        <div className="scroll-down-indicator" aria-hidden="true">
-          <span className="scroll-down-arrow" />
-        </div>
-      </div>
+      {/* ===== Banner / Wallpaper — 使用内层组件以读取 BannerTitleContext ===== */}
+      <WallpaperContent
+        isHomePage={isHomePage}
+        bannerImage={bannerImage}
+        bannerLoaded={bannerLoaded}
+        wallpaperRef={wallpaperRef as React.RefObject<HTMLDivElement>}
+        onBannerLoad={() => setBannerLoaded(true)}
+      />
 
-      {/* Header / Navbar — Firefly 风格重构 */}
+      {/* Header / Navbar — Firefly 风格 */}
       <div
         id="navbar"
-        className={`${scrolled || !isHomePage ? 'navbar-scrolled' : ''} ${isHomePage ? 'navbar-home' : ''}`}
+        className={`${scrolled || !isHomePage ? 'navbar-scrolled' : ''}`}
       >
         <div className="navbar-inner">
           <div className="navbar-grid">
@@ -143,40 +217,62 @@ export default function Layout() {
 
             {/* Desktop Nav Links */}
             <nav className="navbar-links">
-              {menuItems
-                .filter((item) => item.parent === 0)
-                .sort((a, b) => a.order - b.order)
-                .map((item) => renderNavLink(item))}
+              {topLevelItems.map((item) => renderNavLink(item))}
             </nav>
+
+            {/* Search */}
+            <form className="navbar-search" onSubmit={handleSearch}>
+              <span className="navbar-search-icon">⌕</span>
+              <input
+                type="search"
+                placeholder="搜索"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </form>
 
             {/* Right Side Actions */}
             <div className="navbar-actions">
-              <form className="navbar-search" onSubmit={handleSearch}>
-                <span className="navbar-search-icon">⌕</span>
-                <input
-                  type="search"
-                  placeholder="搜索"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </form>
+              {/* Mobile menu toggle — 在 lg (1024px) 以上隐藏 */}
               <button
                 className="navbar-mobile-btn"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 aria-label="Menu"
               >
-                {mobileMenuOpen ? '✕' : '☰'}
+                {mobileMenuOpen ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M3 6h18M3 12h18M3 18h18"/>
+                  </svg>
+                )}
               </button>
             </div>
           </div>
         </div>
-
-        {/* Mobile Menu Panel */}
+        <div
+          className={`navbar-mobile-overlay${mobileMenuOpen ? ' open' : ''}`}
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
         <div className={`navbar-mobile-panel${mobileMenuOpen ? ' open' : ''}`}>
-          {menuItems
-            .filter((item) => item.parent === 0)
-            .sort((a, b) => a.order - b.order)
-            .map((item) => renderNavLink(item, true))}
+          <div className="mobile-menu-header">
+            <span className="mobile-menu-title">导航</span>
+            <button
+              className="mobile-menu-close"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="关闭菜单"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div className="mobile-menu-body">
+            {topLevelItems.map((item) => renderMobileMenuItem(item))}
+          </div>
         </div>
       </div>
 
@@ -276,5 +372,57 @@ export default function Layout() {
     </div>
     </ArticleTocProvider>
     </SiteDataContext.Provider>
+    </BannerTitleProvider>
+  )
+}
+
+/* ── 内层壁纸组件，可通过 BannerTitleContext 读取文章标题 ── */
+function WallpaperContent({
+  isHomePage,
+  bannerImage,
+  bannerLoaded,
+  wallpaperRef,
+  onBannerLoad,
+}: {
+  isHomePage: boolean
+  bannerImage: string
+  bannerLoaded: boolean
+  wallpaperRef: React.RefObject<HTMLDivElement | null>
+  onBannerLoad: () => void
+}) {
+  const { bannerTitle } = useBannerTitle()
+  return (
+    <div
+      id="wallpaper-wrapper"
+      ref={wallpaperRef}
+      className="wallpaper-wrapper"
+      data-loaded={bannerLoaded}
+    >
+      <img src={bannerImage} alt="" className="wallpaper-bg" onLoad={onBannerLoad} />
+      <div className="wallpaper-overlay" aria-hidden="true" />
+      {isHomePage ? (
+        <div className="banner-home-text-overlay">
+          <div>
+            <h1 className="banner-title">
+              {(window as any).MANGO_DATA?.siteName || 'Mango'}
+            </h1>
+            {(window as any).MANGO_DATA?.siteDescription && (
+              <p className="banner-subtitle">
+                {(window as any).MANGO_DATA.siteDescription}
+              </p>
+            )}
+          </div>
+        </div>
+      ) : bannerTitle ? (
+        <div className="banner-post-title-overlay">
+          <div>
+            <h1 className="banner-post-title">{bannerTitle}</h1>
+          </div>
+        </div>
+      ) : null}
+      <div className="scroll-down-indicator" aria-hidden="true">
+        <span className="scroll-down-arrow" />
+      </div>
+    </div>
   )
 }

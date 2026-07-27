@@ -5,6 +5,7 @@ import Archive from './pages/Archive'
 import PostDetail from './pages/PostDetail'
 import Page from './pages/Page'
 import Category from './pages/Category'
+import Categories from './pages/Categories'
 import Search from './pages/Search'
 import Links from './pages/Links'
 import Topics from './pages/Topics'
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/archives/:postId.html" element={<PostDetail />} />
         <Route path="/page/:slug" element={<Page />} />
         <Route path="/post/:slug" element={<PostDetail />} />
+        <Route path="/category" element={<Categories />} />
         <Route path="/category/:slug" element={<Category />} />
         <Route path="/search" element={<Search />} />
         <Route path="/links" element={<Links />} />

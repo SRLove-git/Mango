@@ -38,7 +38,24 @@ export default function Live2D() {
     script.async = true
     document.body.appendChild(script)
 
+    // 轮询等待 #waifu 容器创建完成后再显示，避免加载占位遮挡内容
+    const checkInterval = setInterval(() => {
+      const waifu = document.getElementById('waifu')
+      if (waifu) {
+        waifu.classList.add('l2d-loaded')
+        clearInterval(checkInterval)
+      }
+    }, 100)
+    // 最长等待 5 秒后强制显示，避免一直不可见
+    const forceShow = setTimeout(() => {
+      const waifu = document.getElementById('waifu')
+      if (waifu) waifu.classList.add('l2d-loaded')
+      clearInterval(checkInterval)
+    }, 5000)
+
     return () => {
+      clearInterval(checkInterval)
+      clearTimeout(forceShow)
       const s = document.getElementById('l2d-autoload')
       if (s) s.remove()
 
