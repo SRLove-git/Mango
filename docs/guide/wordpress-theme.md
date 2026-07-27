@@ -8,7 +8,14 @@
 | :--- | :--- |
 | `style.css` | 主题信息，WordPress 通过此文件识别主题 |
 | `index.php` | 主题入口文件 |
-| `functions.php` | 主题函数，包含脚本加载、REST API 注册、设置页面等 |
+| `functions.php` | 主题函数入口，加载 `inc/` 下的所有模块 |
+| `inc/setup.php` | 主题初始化、脚本加载、`MANGO_DATA` 数据注入 |
+| `inc/admin.php` | 后台设置页面（基本设置、主题设置、侧边栏管理、Wiki 管理） |
+| `inc/customizer.php` | WordPress 定制器集成（配色方案等） |
+| `inc/helpers.php` | 辅助函数 |
+| `inc/links.php` | 友链数据管理与健康检查 |
+| `inc/topics.php` | 专栏系统 REST API 注册 |
+| `inc/wiki.php` | Wiki 知识库 REST API 注册与数据管理 |
 
 ## 激活主题
 
@@ -41,6 +48,12 @@ wp_localize_script('mango-app', 'MANGO_DATA', [
 | `GET /wp-json/mango/v1/category-menu` | 获取分类栏菜单 |
 | `GET /wp-json/mango/v1/links` | 获取友链数据（含健康状态和文章） |
 | `POST /wp-json/mango/v1/links/refresh` | 刷新友链缓存（需管理员权限） |
+| `GET /wp-json/mango/v1/topics` | 获取所有专栏列表 |
+| `GET /wp-json/mango/v1/topics/{slug}` | 获取单个专栏详情（含文章） |
+| `GET /wp-json/mango/v1/wiki` | 获取所有 Wiki 项目列表 |
+| `GET /wp-json/mango/v1/wiki/{project}` | 获取 Wiki 项目详情（含页面树） |
+| `GET /wp-json/mango/v1/wiki/{project}/{slug}` | 获取 Wiki 页面内容 |
+| `POST /wp-json/mango/v1/wiki/save` | 保存 Wiki 数据（需管理员权限） |
 
 ### 分类导航栏管理
 
@@ -51,4 +64,6 @@ wp_localize_script('mango-app', 'MANGO_DATA', [
 主题提供了后台设置页面（**外观 → Mango 主题设置**），包含：
 
 - **基本设置**：站点 Logo、头像、随机图片 API、页脚文字
-- **主题设置**：内置配色方案选择（Anime 紫蓝霓虹 / 黑色简约）、自定义配色方案、卡片圆角
+- **主题设置**：内置配色方案选择（Firefly 青绿暗色 / 纯黑简约）、自定义配色方案、卡片圆角
+- **侧边栏管理**：配置左右侧边栏模块
+- **Wiki 管理**：管理 Wiki 知识库项目和页面

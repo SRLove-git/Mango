@@ -21,7 +21,7 @@
 - **友链页面设计** 效仿 [hexo-theme-stellar](https://github.com/xaoxuu/hexo-theme-stellar)
 - **整体风格设计** 效仿 [Firefly](https://github.com/CuteLeaf/Firefly)
 
-## ✨ 功能特性
+## 功能特性
 
 ### 核心功能
 
@@ -35,21 +35,35 @@
 
 - [x] **文章列表** — 首页文章流，分页浏览
 - [x] **文章详情** — 完整的文章展示，支持目录、标签、分类
-- [x] **分类浏览** — 按分类筛选文章
+- [x] **分类浏览** — 按分类筛选文章，支持全部分类列表
 - [x] **归档页** — 按时间线归档文章
 - [x] **友情链接** — 友链页面，支持分类展示与链接分组
 - [x] **页面支持** — 支持 WordPress 原生页面及自定义页面模板
 - [x] **搜索功能** — 实时搜索文章
-- [x] **Wiki 知识库** — 多项目 Wiki 页面，支持树形目录、Markdown 渲染、侧边栏导航
+- [x] **专栏系统** — 专栏/专题列表与详情，支持专栏内文章浏览
+- [x] **Wiki 知识库** — 多项目 Wiki 页面，支持树形目录、Markdown 渲染
+- [x] **留言板** — 独立的留言板页面
 
 ### 布局特性
 
-- [x] **侧边栏** — 支持显示分类、标签、近期文章、Wiki 页面树等
-- [x] **分类导航栏** — 顶部分类快捷导航，支持通过 WordPress 菜单管理（外观 → 菜单 → Category Bar）
+- [x] **侧边栏** — 可配置模块（个人资料、分类、标签云、专栏、TOC、关于、站点信息、自定义 HTML、Wiki 页面树等）
+- [x] **分类导航栏** — 顶部分类快捷导航，支持通过 WordPress 菜单管理
 - [x] **文章目录 (TOC)** — 自动解析页面标题层级生成目录
 - [x] **亮暗色模式** — 跟随系统或手动切换
 
-## 🚀 快速开始
+### 视觉效果
+
+- [x] **Live2D 看板娘** — 可交互的 Live2D 角色
+- [x] **点击特效** — 点击时的视觉反馈动画
+- [x] **樱花特效** — 动态樱花飘落粒子效果
+- [x] **页面过渡动画** — 路由切换时的平滑过渡效果
+- [x] **壁纸设置** — 自定义页面背景壁纸
+
+### 评论系统
+
+- [x] **Waline 评论** — 原生 WordPress 评论集成，支持嵌套回复
+
+## 快速开始
 
 ### 前置要求
 
@@ -94,50 +108,64 @@ npm run build
 
 > **分类导航栏管理：** 激活主题后，前往 WordPress 后台 **外观 → 菜单**，新建一个菜单并添加分类链接，然后在"菜单位置"中勾选 **Category Bar** 并保存。前端会自动读取该菜单渲染分类导航栏。如果未设置菜单，则回退显示全部分类。
 
-## 📁 项目结构
+## 项目结构
 
 ```
 mango/
-├── public/                  # 静态资源
+├── public/                          # 静态资源
 │   ├── favicon.svg
 │   └── icons.svg
 ├── src/
 │   ├── api/
-│   │   └── wordpress.ts     # WordPress REST API 封装
+│   │   ├── wordpress.ts            # WordPress REST API 封装
+│   │   └── image.ts                # 随机图片 API
 │   ├── components/
-│   │   ├── CategoryBar.tsx   # 分类导航栏
-│   │   ├── ClickEffect.tsx   # 点击特效
-│   │   ├── Layout.tsx        # 布局组件（含文章 TOC 上下文）
-│   │   ├── MarkdownRenderer.tsx # Markdown 渲染
-│   │   ├── Pagination.tsx    # 分页组件
-│   │   ├── PageTransition.tsx # 页面过渡动画
-│   │   ├── PostCard.tsx      # 文章卡片
-│   │   ├── SakuraEffect.tsx  # 樱花特效
-│   │   ├── Sidebar.tsx       # 侧边栏（含 wiki_tree 模块）
-│   │   └── ...
+│   │   ├── CategoryBar.tsx          # 分类导航栏
+│   │   ├── ClickEffect.tsx          # 点击特效
+│   │   ├── Layout.tsx               # 布局组件
+│   │   ├── Live2D.tsx               # Live2D 看板娘
+│   │   ├── MarkdownRenderer.tsx     # Markdown 渲染
+│   │   ├── NativeComments.tsx       # Waline 评论
+│   │   ├── PageTransition.tsx       # 页面过渡动画
+│   │   ├── Pagination.tsx           # 分页组件
+│   │   ├── PostCard.tsx             # 文章卡片
+│   │   ├── SakuraEffect.tsx         # 樱花特效
+│   │   ├── Sidebar.tsx              # 侧边栏
+│   │   └── WallpaperSettings.tsx    # 壁纸设置
 │   ├── context/
-│   │   ├── ArticleTocContext.tsx  # 目录扫描上下文
-│   │   └── SiteDataContext.tsx    # 站点数据上下文
+│   │   ├── ArticleTocContext.tsx
+│   │   ├── BannerTitleContext.tsx
+│   │   └── SiteDataContext.tsx
 │   ├── pages/
-│   │   ├── Archive.tsx       # 归档页
-│   │   ├── Category.tsx      # 分类页
-│   │   ├── Home.tsx          # 首页
-│   │   ├── Links.tsx         # 友链页
-│   │   ├── Page.tsx          # 通用页面
-│   │   ├── PostDetail.tsx    # 文章详情页
-│   │   ├── Search.tsx        # 搜索页
-│   │   ├── WikiDetail.tsx    # Wiki 页面详情
-│   │   └── WikiIndex.tsx     # Wiki 项目列表
-│   ├── App.tsx               # 路由配置
-│   ├── main.tsx              # 入口文件
-│   └── index.css             # 全局样式
-├── theme/                    # WordPress 主题文件
+│   │   ├── Archive.tsx              # 归档页
+│   │   ├── Categories.tsx           # 全部分类列表页
+│   │   ├── Category.tsx             # 分类页
+│   │   ├── Guestbook.tsx            # 留言板
+│   │   ├── Home.tsx                 # 首页
+│   │   ├── Links.tsx                # 友链页
+│   │   ├── Page.tsx                 # 通用页面
+│   │   ├── PostDetail.tsx           # 文章详情页
+│   │   ├── Search.tsx               # 搜索页
+│   │   ├── TopicDetail.tsx          # 专栏详情页
+│   │   ├── Topics.tsx               # 专栏列表页
+│   │   ├── WikiDetail.tsx           # Wiki 页面详情
+│   │   └── WikiIndex.tsx            # Wiki 项目列表
+│   ├── App.tsx                      # 路由配置
+│   ├── main.tsx                     # 入口文件
+│   └── index.css                    # 全局样式
+├── theme/                           # WordPress 主题文件
 │   ├── inc/
-│   │   ├── wiki.php          # Wiki REST API 端点
-│   │   └── ...
-│   ├── functions.php         # 主题函数
-│   ├── index.php             # 主题入口
-│   └── style.css             # 主题信息
+│   │   ├── admin.php
+│   │   ├── customizer.php
+│   │   ├── helpers.php
+│   │   ├── links.php
+│   │   ├── setup.php
+│   │   ├── topics.php
+│   │   └── wiki.php
+│   ├── functions.php
+│   ├── index.php
+│   └── style.css
+├── docs/                            # 文档（VitePress）
 ├── index.html
 ├── vite.config.ts
 ├── tsconfig.json
@@ -145,7 +173,7 @@ mango/
 └── .oxlintrc.json
 ```
 
-## 🧞 指令
+## 指令
 
 | 命令                   | 操作                       |
 | :--------------------- | :------------------------- |
@@ -156,7 +184,7 @@ mango/
 | `npm run build:check`  | TypeScript 检查并构建      |
 | `npm run lint`         | 使用 Oxlint 检查代码       |
 
-## 🧩 技术栈
+## 技术栈
 
 - [React 19](https://react.dev/) — UI 框架
 - [TypeScript](https://www.typescriptlang.org/) — 类型系统
@@ -165,6 +193,6 @@ mango/
 - [WordPress REST API](https://developer.wordpress.org/rest-api/) — 数据源
 - [Oxlint](https://oxc.rs/) — 代码检查
 
-## 📄 许可
+## 许可
 
 [GPL v2](LICENSE)
