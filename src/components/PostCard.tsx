@@ -10,7 +10,7 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post }: PostCardProps) {
-  const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url
+  const featuredImage = post.meta?.external_thumbnail || post._embedded?.['wp:featuredmedia']?.[0]?.source_url
   const useFallback = useRandomImageFallback()
   const [retryCount, setRetryCount] = useState(0)
   const [hidden, setHidden] = useState(false)

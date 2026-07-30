@@ -132,8 +132,8 @@ export default function Sidebar({ side, className }: Props) {
       return (
         <div className="glass profile-card" key={key}>
           <div className="avatar-wrap">
-            {user?.avatar_urls?.['96'] ? (
-              <img className="avatar" src={user.avatar_urls['96']} alt={user.name} />
+            {((window as any).MANGO_DATA?.avatarUrl || user?.avatar_urls?.['96']) ? (
+              <img className="avatar" src={(window as any).MANGO_DATA?.avatarUrl || user.avatar_urls['96']} alt={user?.name || 'Mango'} />
             ) : (
               <div className="avatar" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))' }} />
             )}

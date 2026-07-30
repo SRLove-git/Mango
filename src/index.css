@@ -2883,9 +2883,9 @@ body.sakura-disabled #sakura-canvas {
 
 /* ===== Post Detail Content (Markdown) ===== */
 .detail-content {
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.8;
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 .detail-content h1,
@@ -4747,9 +4747,9 @@ body.sakura-disabled #sakura-canvas {
 }
 
 .wiki-article-content {
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.8;
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 .wiki-article-content h1,

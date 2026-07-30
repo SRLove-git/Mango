@@ -102,6 +102,7 @@ function mango_enqueue_scripts(): void {
 		'siteName'        => ! empty( $mango_basic['site_name'] ) ? $mango_basic['site_name'] : get_bloginfo( 'name' ),
 		'siteDescription' => get_bloginfo( 'description' ),
 		'siteLogo'        => esc_url_raw( $mango_basic['site_logo'] ?? '' ),
+		'avatarUrl'       => esc_url_raw( $mango_basic['avatar_url'] ?? '' ),
 		'bioText'         => $mango_basic['bio_text'] ?? '',
 		'randomImageApi'  => esc_url_raw( $mango_basic['random_image_api'] ?? '' ),
 		'useRandomImage' => ( $mango_basic['use_random_image'] ?? '1' ) === '1',
@@ -174,6 +175,76 @@ function mango_theme_setup(): void {
 	] );
 }
 add_action( 'after_setup_theme', 'mango_theme_setup' );
+
+/**
+ * 注册特色图片外链 post meta 并暴露到 REST API
+ */
+function mango_register_external_thumbnail_meta(): void {
+	register_post_meta( 'post', 'external_thumbnail', [
+		'show_in_rest'      => true,
+		'single'            => true,
+		'type'              => 'string',
+		'default'           => '',
+		'sanitize_callback' => 'esc_url_raw',
+	] );
+}
+add_action( 'init', 'mango_register_external_thumbnail_meta' );
+
+/**
+ * 在文章编辑页添加「特色图片外链」Meta Box
+ */
+function mango_add_external_thumbnail_meta_box(): void {
+	add_meta_box(
+		'mango_external_thumbnail',
+		__( '特色图片外链', 'mango' ),
+		'mango_render_external_thumbnail_meta_box',
+		'post',
+		'side',
+		'default'
+	);
+}
+add_action( 'add_meta_boxes', 'mango_add_external_thumbnail_meta_box' );
+
+/**
+ * 渲染特色图片外链 Meta Box
+ */
+function mango_render_external_thumbnail_meta_box( WP_Post $post ): void {
+	$value = get_post_meta( $post->ID, 'external_thumbnail', true );
+	wp_nonce_field( 'mango_external_thumbnail', 'mango_external_thumbnail_nonce' );
+	?>
+	<input type="url" name="mango_external_thumbnail" id="mango_external_thumbnail"
+		   value="<?php echo esc_attr( $value ); ?>" class="large-text"
+		   placeholder="https://example.com/image.jpg" />
+	<p style="color:#94a3b8;font-size:12px;margin:8px 0 0;">
+		<?php _e( '填写图片外链将优先于媒体库特色图片，留空则使用右侧「特色图片」。', 'mango' ); ?>
+	</p>
+	<?php
+}
+
+/**
+ * 保存特色图片外链 Meta Box 数据
+ */
+function mango_save_external_thumbnail_meta_box( int $post_id ): void {
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		return;
+	}
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+	if ( ! isset( $_POST['mango_external_thumbnail_nonce'] ) ||
+		! wp_verify_nonce( $_POST['mango_external_thumbnail_nonce'], 'mango_external_thumbnail' ) ) {
+		return;
+	}
+	if ( isset( $_POST['mango_external_thumbnail'] ) ) {
+		$url = esc_url_raw( $_POST['mango_external_thumbnail'] );
+		if ( $url === '' ) {
+			delete_post_meta( $post_id, 'external_thumbnail' );
+		} else {
+			update_post_meta( $post_id, 'external_thumbnail', $url );
+		}
+	}
+}
+add_action( 'save_post', 'mango_save_external_thumbnail_meta_box' );
 
 /**
  * 为 Mango 主脚本添加 type="module" 属性

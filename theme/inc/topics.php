@@ -138,7 +138,7 @@ function mango_get_topic( WP_REST_Request $request ): WP_REST_Response {
 	$posts = [];
 	if ( $posts_query->have_posts() ) {
 		foreach ( $posts_query->posts as $p ) {
-			$thumbnail  = get_the_post_thumbnail_url( $p->ID, 'full' );
+			$thumbnail  = get_post_meta( $p->ID, 'external_thumbnail', true ) ?: get_the_post_thumbnail_url( $p->ID, 'full' );
 			$categories = wp_get_post_categories( $p->ID, [ 'fields' => 'all' ] );
 			$cat_data   = [];
 			foreach ( $categories as $cat ) {

@@ -10,6 +10,7 @@ export interface WPPost {
   featured_media: number
   meta?: {
     topic?: string
+    external_thumbnail?: string
   }
   _embedded?: {
     'wp:featuredmedia'?: Array<{

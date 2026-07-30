@@ -140,7 +140,8 @@ export default function PostDetail() {
     year: 'numeric', month: 'long', day: 'numeric'
   })
   const { chars, minutes } = estimateReadingTime(post.content.rendered)
-  const avatarUrl = user?.avatar_urls ? getAvatarUrl(user.avatar_urls) : ''
+  const customAvatar = (window as any).MANGO_DATA?.avatarUrl || ''
+  const avatarUrl = customAvatar || (user?.avatar_urls ? getAvatarUrl(user.avatar_urls) : '')
 
   return (
     <article className="post-detail">
