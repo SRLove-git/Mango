@@ -112,7 +112,7 @@ function mango_render_admin_page(): void {
 			$raw     = json_decode( wp_unslash( $_POST['mango_sidebar_widgets'] ), true );
 			$widgets = [];
 			if ( is_array( $raw ) ) {
-				$valid_types = [ 'profile', 'categories', 'tags', 'topics', 'topic_posts', 'wiki_tree', 'toc', 'about', 'site_info', 'site_stats', 'custom_html' ];
+				$valid_types = [ 'profile', 'categories', 'tags', 'topics', 'topic_posts', 'wiki_tree', 'toc', 'about', 'site_info', 'site_stats', 'custom_html', 'music' ];
 				$valid_pages = [ 'home', 'post', 'category', 'topic', 'topics', 'wiki', 'wiki_list', 'search', 'archive', 'page', 'links' ];
 				foreach ( $raw as $w ) {
 					$display_on = [];
@@ -1269,20 +1269,21 @@ function mango_render_admin_page(): void {
 
 					<?php
 					$widget_types = [
-						'profile'     => __( '个人资料', 'mango' ),
-						'categories'  => __( '分类列表', 'mango' ),
-						'tags'        => __( '标签云', 'mango' ),
-						'topics'      => __( '专栏列表', 'mango' ),
-						'topic_posts' => __( '专栏目录', 'mango' ),
-						'wiki_tree'   => __( 'Wiki 页面树', 'mango' ),
-						'toc'         => __( '文章目录', 'mango' ),
-						'about'       => __( '自定义文本', 'mango' ),
-						'site_info'   => __( '站点信息', 'mango' ),
-						'site_stats'  => __( '站点统计', 'mango' ),
-						'custom_html' => __( '自定义 HTML', 'mango' ),
+					'profile'     => __( '个人资料', 'mango' ),
+					'categories'  => __( '分类列表', 'mango' ),
+					'tags'        => __( '标签云', 'mango' ),
+					'topics'      => __( '专栏列表', 'mango' ),
+					'topic_posts' => __( '专栏目录', 'mango' ),
+					'wiki_tree'   => __( 'Wiki 页面树', 'mango' ),
+					'toc'         => __( '文章目录', 'mango' ),
+					'about'       => __( '自定义文本', 'mango' ),
+					'site_info'   => __( '站点信息', 'mango' ),
+					'site_stats'  => __( '站点统计', 'mango' ),
+					'custom_html' => __( '自定义 HTML', 'mango' ),
+					'music'       => __( '音乐播放器', 'mango' ),
 					];
-					$widget_type_needs_content = [ 'about', 'custom_html' ];
-					$widget_type_has_default_title = [ 'profile', 'categories', 'tags', 'topics', 'topic_posts', 'wiki_tree', 'toc', 'site_info', 'site_stats' ];
+					$widget_type_needs_content = [ 'about', 'custom_html', 'music' ];
+					$widget_type_has_default_title = [ 'profile', 'categories', 'tags', 'topics', 'topic_posts', 'wiki_tree', 'toc', 'site_info', 'site_stats', 'music' ];
 					$page_types = [
 						'home'     => __( '首页', 'mango' ),
 						'post'     => __( '文章页', 'mango' ),
@@ -1387,6 +1388,16 @@ function mango_render_admin_page(): void {
 
 						function serialize() { $input.val(JSON.stringify(widgets)); }
 
+					function contentPlaceholder(type) {
+						if (type === 'music') {
+							return '支持网易云音乐歌单或手动添加歌曲：\n\n网易云歌单（以下任一格式）：\nnetease:歌单ID\nnetease:playlist:歌单ID\nhttps://music.163.com/#/playlist?id=歌单ID\n\n手动添加（每行一首）：\n歌曲名 - 歌手 - 音频链接\n歌曲名 - 音频链接';
+						}
+						if (type === 'custom_html') {
+							return '输入 HTML 代码...';
+						}
+						return '输入文本内容...';
+					}
+
 						function render() {
 							$('#mango-widgets-left, #mango-widgets-right').each(function() {
 								var side = $(this).data('side');
@@ -1420,7 +1431,7 @@ function mango_render_admin_page(): void {
 									html += '<input type="text" class="mango-input mango-inline-title" value="' + $('<span>').text(w.title || '').html() + '" placeholder="留空使用默认标题">';
 									html += '</div>';
 									html += '<div class="mango-field mango-inline-content-field"' + ($.inArray(w.type, needsContent) === -1 ? ' style="display:none;"' : '') + '><label>内容</label>';
-									html += '<textarea class="mango-input mango-textarea mango-inline-content" rows="3">' + $('<span>').text(w.content || '').html() + '</textarea>';
+								html += '<textarea class="mango-input mango-textarea mango-inline-content" rows="3" placeholder="' + contentPlaceholder(w.type) + '">' + $('<span>').text(w.content || '').html() + '</textarea>';
 									html += '</div>';
 									html += '<div class="mango-field"><label>显示页面</label><p class="mango-field-desc" style="margin:0 0 6px;font-size:11px;color:#666;">不勾选则所有页面显示</p><div class="mango-page-checkboxes mango-inline-pages" data-widget-id="' + w.id + '">';
 									$.each(pageLabels, function(pk, pl) {
@@ -1442,7 +1453,11 @@ function mango_render_admin_page(): void {
 
 						$('.mango-btn-add-widget').on('click', function() { $newForm.slideToggle(180); $('.mango-widget-inline-edit:visible').slideUp(180); });
 						$('.mango-btn-cancel-new-widget').on('click', function() { $newForm.slideUp(180); $newForm.find('input, textarea').val(''); $('#mango-new-widget-content-field').hide(); });
-						$('#mango_new_widget_type').on('change', function() { $('#mango-new-widget-content-field').toggle($.inArray($(this).val(), needsContent) !== -1); });
+						$('#mango_new_widget_type').on('change', function() {
+						var type = $(this).val();
+						$('#mango-new-widget-content-field').toggle($.inArray(type, needsContent) !== -1);
+						$('#mango_new_widget_content').attr('placeholder', contentPlaceholder(type));
+					});
 
 						$('.mango-btn-save-new-widget').on('click', function() {
 							var side = $('#mango_new_widget_side').val(), type = $('#mango_new_widget_type').val();
@@ -1462,9 +1477,11 @@ function mango_render_admin_page(): void {
 							$editForm.find('.mango-inline-content-field').toggle($.inArray(type, needsContent) !== -1);
 						});
 						$(document).on('change', '.mango-inline-type', function() {
-							var $f = $(this).closest('.mango-widget-inline-edit');
-							$f.find('.mango-inline-content-field').toggle($.inArray($(this).val(), needsContent) !== -1);
-						});
+						var $f = $(this).closest('.mango-widget-inline-edit');
+						var type = $(this).val();
+						$f.find('.mango-inline-content-field').toggle($.inArray(type, needsContent) !== -1);
+						$f.find('.mango-inline-content').attr('placeholder', contentPlaceholder(type));
+					});
 						$(document).on('click', '.mango-btn-cancel-edit', function() { $(this).closest('.mango-widget-inline-edit').slideUp(180); });
 						$(document).on('click', '.mango-btn-save-edit', function() {
 							var $card = $(this).closest('.mango-widget-card'), id = $card.data('id'), $f = $card.find('.mango-widget-inline-edit');

@@ -1,8 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSiteData } from '../context/SiteDataContext'
 import { useArticleToc } from '../context/ArticleTocContext'
-import { getWikiProject, type Topic } from '../api/wordpress'
+import { getWikiProject, getNeteasePlaylist, type Topic, type MusicTrack } from '../api/wordpress'
 
 interface Props {
   side: 'left' | 'right'
@@ -38,10 +38,275 @@ const DEFAULT_TITLES: Record<string, string> = {
   site_info: '站点信息',
   site_stats: '站点统计',
   custom_html: '自定义',
+  music: '音乐',
 }
 
-// 需要内容的 widget 类型（about / custom_html）
+// 需要内容的 widget 类型（about / custom_html / music）
 const CONTENT_TYPES = ['about', 'custom_html']
+
+// ===== 音乐播放器 =====
+
+type Track = MusicTrack
+
+/** 检测内容是否为网易云音乐歌单引用，返回歌单 ID 或 null */
+function parseNeteasePlaylistId(content: string): string | null {
+  const trimmed = content.trim()
+  // netease:playlist:12345678 或 netease:12345678
+  const m1 = trimmed.match(/^netease:(?:playlist:)?(\d+)/i)
+  if (m1) return m1[1]
+  // https://music.163.com/#/playlist?id=12345678 等各种 URL 格式
+  const m2 = trimmed.match(/music\.163\.com.*[?&]id=(\d+)/i)
+  if (m2) return m2[1]
+  return null
+}
+
+function parseTracks(content: string): Track[] {
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => {
+      const parts = line.split(' - ')
+      if (parts.length >= 3) {
+        return { title: parts[0].trim(), artist: parts[1].trim(), url: parts.slice(2).join(' - ').trim() }
+      }
+      if (parts.length === 2) {
+        return { title: parts[0].trim(), artist: '', url: parts[1].trim() }
+      }
+      const url = line.trim()
+      const filename = url.split('/').pop()?.split('?')[0] || url
+      const name = filename.replace(/\.[^/.]+$/, '') || '未知曲目'
+      try {
+        return { title: decodeURIComponent(name), artist: '', url }
+      } catch {
+        return { title: name, artist: '', url }
+      }
+    })
+    .filter((t) => t.url)
+}
+
+function formatTime(sec: number): string {
+  if (!isFinite(sec) || sec < 0) return '0:00'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function MusicPlayer({ tracks }: { tracks: Track[] }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [showList, setShowList] = useState(false)
+
+  const track = tracks[currentIndex]
+
+  const play = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+  }, [])
+
+  const pause = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.pause()
+    setIsPlaying(false)
+  }, [])
+
+  const switchTrack = useCallback((index: number) => {
+    setCurrentIndex(index)
+    setCurrentTime(0)
+    // 切换后自动播放
+    setTimeout(() => {
+      const audio = audioRef.current
+      if (audio) {
+        audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+      }
+    }, 0)
+  }, [])
+
+  const next = useCallback(() => {
+    switchTrack((currentIndex + 1) % tracks.length)
+  }, [currentIndex, tracks.length, switchTrack])
+
+  const prev = useCallback(() => {
+    switchTrack((currentIndex - 1 + tracks.length) % tracks.length)
+  }, [currentIndex, tracks.length, switchTrack])
+
+  // 当 src 变化时重载
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.load()
+  }, [currentIndex])
+
+  // 事件绑定
+  const onTimeUpdate = () => {
+    if (audioRef.current) setCurrentTime(audioRef.current.currentTime)
+  }
+  const onLoadedMetadata = () => {
+    if (audioRef.current) setDuration(audioRef.current.duration)
+  }
+  const onEnded = () => {
+    if (tracks.length > 1) next()
+    else setIsPlaying(false)
+  }
+
+  const onSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current
+    if (!audio || !duration) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    audio.currentTime = ratio * duration
+    setCurrentTime(audio.currentTime)
+  }
+
+  const progress = duration ? (currentTime / duration) * 100 : 0
+
+  return (
+    <div className="music-player">
+      <audio
+        ref={audioRef}
+        src={track?.url}
+        onTimeUpdate={onTimeUpdate}
+        onLoadedMetadata={onLoadedMetadata}
+        onEnded={onEnded}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+      />
+
+      <div className="music-info">
+        <div className={`music-disc${isPlaying ? ' spinning' : ''}`}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+          </svg>
+        </div>
+        <div className="music-meta">
+          <div className="music-title" title={track?.title}>{track?.title || '未在播放'}</div>
+          <div className="music-artist">{track?.artist || '未知艺术家'}</div>
+        </div>
+      </div>
+
+      <div className="music-progress" onClick={onSeek}>
+        <div className="music-progress-bar" style={{ width: `${progress}%` }} />
+      </div>
+
+      <div className="music-time">
+        <span>{formatTime(currentTime)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+
+      <div className="music-controls">
+        <button className="music-btn" onClick={prev} title="上一首" aria-label="上一首">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+          </svg>
+        </button>
+        <button
+          className="music-btn music-btn-play"
+          onClick={() => (isPlaying ? pause() : play())}
+          title={isPlaying ? '暂停' : '播放'}
+          aria-label={isPlaying ? '暂停' : '播放'}
+        >
+          {isPlaying ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+        <button className="music-btn" onClick={next} title="下一首" aria-label="下一首">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 6h2v12h-2zm-9.5 6l8.5 6V6z" transform="scale(-1,1) translate(-24,0)" />
+          </svg>
+        </button>
+      </div>
+
+      {tracks.length > 1 && (
+        <button
+          className="music-playlist-toggle"
+          onClick={() => setShowList(!showList)}
+        >
+          {showList ? '收起列表' : `播放列表 (${tracks.length})`}
+        </button>
+      )}
+
+      {showList && tracks.length > 1 && (
+        <ul className="music-playlist">
+          {tracks.map((t, i) => (
+            <li
+              key={i}
+              className={`music-playlist-item${i === currentIndex ? ' active' : ''}`}
+              onClick={() => switchTrack(i)}
+            >
+              <span className="music-playlist-index">{i === currentIndex && isPlaying ? '♪' : i + 1}</span>
+              <span className="music-playlist-name">{t.title}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/** 音乐 widget 包装器：支持网易云歌单异步加载与手动歌曲列表 */
+function MusicWidget({ content }: { content: string }) {
+  const playlistId = parseNeteasePlaylistId(content)
+  const [tracks, setTracks] = useState<Track[]>(() => {
+    if (playlistId) return []
+    return parseTracks(content)
+  })
+  const [loading, setLoading] = useState(!!playlistId)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!playlistId) return
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    getNeteasePlaylist(playlistId)
+      .then((data) => {
+        if (cancelled) return
+        if (data && data.tracks.length > 0) {
+          setTracks(data.tracks)
+        } else {
+          setError('歌单加载失败或为空')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError('歌单加载失败')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [playlistId])
+
+  if (loading) {
+    return (
+      <div className="music-player music-loading">
+        <div className="music-disc spinning">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+          </svg>
+        </div>
+        <span className="music-loading-text">正在加载歌单…</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return <div className="music-player music-error">{error}</div>
+  }
+
+  if (tracks.length === 0) return null
+  return <MusicPlayer tracks={tracks} />
+}
 
 export default function Sidebar({ side, className }: Props) {
   const navigate = useNavigate()
@@ -460,6 +725,17 @@ export default function Sidebar({ side, className }: Props) {
           ) : (
             <p className="sidebar-about-text">{w.content}</p>
           )}
+        </div>
+      )
+    }
+
+    // --- music (音乐播放器) ---
+    if (w.type === 'music') {
+      if (!w.content || !w.content.trim()) return null
+      return (
+        <div className="glass music-widget" key={key}>
+          <h3 className="sidebar-title">{title}</h3>
+          <MusicWidget content={w.content} />
         </div>
       )
     }

@@ -455,3 +455,31 @@ export async function postComment(data: CommentSubmitData): Promise<{ comment: W
 }
 
 export type { WPCategory }
+
+/* =====================================================
+ * 音乐 - 网易云歌单
+ * ===================================================== */
+
+export interface MusicTrack {
+  title: string
+  artist: string
+  url: string
+}
+
+export interface NeteasePlaylist {
+  name: string
+  tracks: MusicTrack[]
+}
+
+/** 获取网易云音乐歌单（通过后端代理，避免 CORS） */
+export async function getNeteasePlaylist(playlistId: string): Promise<NeteasePlaylist | null> {
+  const siteUrl = (window as any).MANGO_DATA?.siteUrl || ''
+  const url = `${siteUrl}/wp-json/mango/v1/netease/playlist?id=${encodeURIComponent(playlistId)}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}

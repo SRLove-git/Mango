@@ -2141,6 +2141,221 @@ body.sakura-disabled #sakura-canvas {
   box-shadow: 0 0 16px var(--accent-glow);
 }
 
+/* ===== Music Player Widget ===== */
+
+.music-player {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.music-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.music-disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+  box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+.music-disc.spinning {
+  animation: music-spin 4s linear infinite;
+}
+
+@keyframes music-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.music-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.music-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-artist {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-progress {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--glass-hover);
+  cursor: pointer;
+  overflow: hidden;
+  transition: height 0.2s ease;
+}
+
+.music-progress:hover {
+  height: 8px;
+}
+
+.music-progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+  transition: width 0.15s linear;
+}
+
+.music-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: -4px;
+}
+
+.music-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.music-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  background: var(--glass-hover);
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.music-btn:hover {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.music-btn-play {
+  width: 46px;
+  height: 46px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+  box-shadow: 0 2px 12px var(--accent-glow);
+}
+
+.music-btn-play:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 18px var(--accent-glow);
+}
+
+.music-playlist-toggle {
+  align-self: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.music-playlist-toggle:hover {
+  color: var(--text);
+  background: var(--glass-hover);
+}
+
+.music-playlist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+.music-playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.music-playlist-item:hover {
+  background: var(--glass-hover);
+}
+
+.music-playlist-item.active {
+  color: var(--accent);
+  background: var(--accent-glow);
+  font-weight: 600;
+}
+
+.music-playlist-index {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.music-playlist-item.active .music-playlist-index {
+  color: var(--accent);
+}
+
+.music-playlist-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-loading {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.music-loading-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.music-error {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
 /* ===== Main Content ===== */
 
 .main-content {

@@ -19,6 +19,7 @@ $modules = [
     'links.php',
     'topics.php',
     'wiki.php',
+    'music.php',
     'admin.php',
 ];
 
